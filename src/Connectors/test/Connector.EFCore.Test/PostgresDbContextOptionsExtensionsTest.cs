@@ -16,14 +16,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using Steeltoe.CloudFoundry.Connector.EFCore.Test;
-using Steeltoe.CloudFoundry.Connector.Test;
+using Steeltoe.Connector.EFCore.Test;
+using Steeltoe.Connector.Test;
 using Steeltoe.Extensions.Configuration.CloudFoundry;
 using System;
 using System.Collections.Generic;
 using Xunit;
 
-namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
+namespace Steeltoe.Connector.PostgreSql.EFCore.Test
 {
     public class PostgresDbContextOptionsExtensionsTest
     {
@@ -59,8 +59,8 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
         public void UseNpgsql_ThrowsIfConfigurationNull()
         {
             // Arrange
-            DbContextOptionsBuilder optionsBuilder = new DbContextOptionsBuilder();
-            DbContextOptionsBuilder<GoodDbContext> goodBuilder = new DbContextOptionsBuilder<GoodDbContext>();
+            var optionsBuilder = new DbContextOptionsBuilder();
+            var goodBuilder = new DbContextOptionsBuilder<GoodDbContext>();
             IConfigurationRoot config = null;
 
             // Act and Assert
@@ -81,9 +81,9 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
         public void UseNpgsql_ThrowsIfServiceNameNull()
         {
             // Arrange
-            DbContextOptionsBuilder optionsBuilder = new DbContextOptionsBuilder();
-            DbContextOptionsBuilder<GoodDbContext> goodBuilder = new DbContextOptionsBuilder<GoodDbContext>();
-            IConfigurationRoot config = new ConfigurationBuilder().Build();
+            var optionsBuilder = new DbContextOptionsBuilder();
+            var goodBuilder = new DbContextOptionsBuilder<GoodDbContext>();
+            var config = new ConfigurationBuilder().Build();
             string serviceName = null;
 
             // Act and Assert
@@ -99,7 +99,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
         {
             // Arrange
             IServiceCollection services = new ServiceCollection();
-            IConfigurationRoot config = new ConfigurationBuilder().Build();
+            var config = new ConfigurationBuilder().Build();
 
             // Act and Assert
             services.AddDbContext<GoodDbContext>(options =>
@@ -117,7 +117,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
         {
             // Arrange
             IServiceCollection services = new ServiceCollection();
-            IConfigurationRoot config = new ConfigurationBuilder().Build();
+            var config = new ConfigurationBuilder().Build();
 
             // Act and Assert
             services.AddDbContext<GoodDbContext>(options =>
@@ -136,7 +136,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
             Environment.SetEnvironmentVariable("VCAP_APPLICATION", TestHelpers.VCAP_APPLICATION);
             Environment.SetEnvironmentVariable("VCAP_SERVICES", PostgresTestHelpers.TwoServerVCAP_EDB);
 
-            ConfigurationBuilder builder = new ConfigurationBuilder();
+            var builder = new ConfigurationBuilder();
             builder.AddCloudFoundry();
             var config = builder.Build();
 
@@ -157,7 +157,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
             Environment.SetEnvironmentVariable("VCAP_APPLICATION", TestHelpers.VCAP_APPLICATION);
             Environment.SetEnvironmentVariable("VCAP_SERVICES", PostgresTestHelpers.SingleServerVCAP_EDB);
 
-            ConfigurationBuilder builder = new ConfigurationBuilder();
+            var builder = new ConfigurationBuilder();
             builder.AddCloudFoundry();
             var config = builder.Build();
 
@@ -193,7 +193,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
             Environment.SetEnvironmentVariable("VCAP_APPLICATION", TestHelpers.VCAP_APPLICATION);
             Environment.SetEnvironmentVariable("VCAP_SERVICES", PostgresTestHelpers.SingleServerVCAP_Crunchy);
 
-            ConfigurationBuilder builder = new ConfigurationBuilder();
+            var builder = new ConfigurationBuilder();
             builder.AddCloudFoundry();
             var config = builder.Build();
 
@@ -234,7 +234,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.EFCore.Test
                 ["postgres:client:urlEncodedCredentials"] = "true"
             };
 
-            ConfigurationBuilder builder = new ConfigurationBuilder();
+            var builder = new ConfigurationBuilder();
             builder.AddInMemoryCollection(appsettings);
             builder.AddCloudFoundry();
             var config = builder.Build();

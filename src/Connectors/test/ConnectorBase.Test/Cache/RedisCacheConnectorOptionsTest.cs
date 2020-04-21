@@ -13,13 +13,12 @@
 // limitations under the License.
 
 using Microsoft.Extensions.Configuration;
-using Steeltoe.CloudFoundry.Connector.Test;
 using Steeltoe.Extensions.Configuration.CloudFoundry;
 using System;
 using System.Collections.Generic;
 using Xunit;
 
-namespace Steeltoe.CloudFoundry.Connector.Redis.Test
+namespace Steeltoe.Connector.Redis.Test
 {
     [Collection("Redis")]
     public class RedisCacheConnectorOptionsTest
@@ -59,7 +58,7 @@ namespace Steeltoe.CloudFoundry.Connector.Redis.Test
                 ["redis:client:syncTimeout"] = "100"
             };
 
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
 
@@ -94,7 +93,7 @@ namespace Steeltoe.CloudFoundry.Connector.Redis.Test
             {
                 ["redis:client:ConnectionString"] = "Server=fake;Database=test;Uid=steeltoe;Pwd=password;"
             };
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
 
@@ -120,7 +119,7 @@ namespace Steeltoe.CloudFoundry.Connector.Redis.Test
             Environment.SetEnvironmentVariable("VCAP_SERVICES", RedisCacheTestHelpers.SingleServerVCAP);
 
             // add settings to config
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             configurationBuilder.AddEnvironmentVariables();
             configurationBuilder.AddCloudFoundry();

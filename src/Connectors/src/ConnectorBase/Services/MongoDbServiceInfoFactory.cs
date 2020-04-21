@@ -12,20 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Steeltoe.Extensions.Configuration.CloudFoundry;
+using Steeltoe.Extensions.Configuration;
 
-namespace Steeltoe.CloudFoundry.Connector.Services
+namespace Steeltoe.Connector.Services
 {
     public class MongoDbServiceInfoFactory : ServiceInfoFactory
     {
         public MongoDbServiceInfoFactory()
             : base(new Tags("mongodb"), MongoDbServiceInfo.MONGODB_SCHEME)
         {
+            // add the uri property used by the Microsoft Azure Service Broker with CosmosDb
+            UriKeys.Add("cosmosdb_connection_string");
         }
 
         public override IServiceInfo Create(Service binding)
         {
-            string uri = GetUriFromCredentials(binding.Credentials);
+            var uri = GetUriFromCredentials(binding.Credentials);
             return new MongoDbServiceInfo(binding.Name, uri);
         }
     }

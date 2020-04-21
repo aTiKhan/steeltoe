@@ -19,7 +19,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace Steeltoe.Consul.Util
+namespace Steeltoe.Discovery.Consul.Util
 {
     public static class ConsulServerUtils
     {
@@ -43,24 +43,21 @@ namespace Steeltoe.Consul.Util
 
         public static string FixIPv6Address(string address)
         {
-            try
+            if (IPAddress.TryParse(address, out IPAddress parsed) &&
+                parsed.AddressFamily == AddressFamily.InterNetworkV6)
             {
-                var parsed = IPAddress.Parse(address);
-                if (parsed.AddressFamily == AddressFamily.InterNetworkV6)
+                var bytes = parsed.GetAddressBytes();
+                StringBuilder sb = new StringBuilder("[");
+                for (int i = 0; i < bytes.Length; i = i + 2)
                 {
-                    var bytes = parsed.GetAddressBytes();
-                    StringBuilder sb = new StringBuilder("[");
-                    for (int i = 0; i < bytes.Length; i = i + 2)
-                    {
-                        ushort num = (ushort)((bytes[i] << 8) | bytes[i + 1]);
-                        sb.Append(num.ToString("x") + ":");
-                    }
-
-                    sb.Replace(':', ']', sb.Length - 1, 1);
-                    return sb.ToString();
+                    ushort num = (ushort)((bytes[i] << 8) | bytes[i + 1]);
+                    sb.Append(num.ToString("x") + ":");
                 }
+
+                sb.Replace(':', ']', sb.Length - 1, 1);
+                return sb.ToString();
             }
-            catch (Exception)
+            else
             {
                 // Log
             }

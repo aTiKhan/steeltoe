@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Steeltoe.Common.Discovery;
 using Steeltoe.Common.Http;
+using Steeltoe.Extensions.Configuration.Placeholder;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -264,7 +265,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                             "Located environment: {name}, {profiles}, {label}, {version}, {state}", env.Name, env.Profiles, env.Label, env.Version, env.State);
                         if (updateDictionary)
                         {
-                            IDictionary<string, string> newData = new Dictionary<string, string>();
+                            var newData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                             if (!string.IsNullOrEmpty(env.State))
                             {
@@ -287,6 +288,9 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                             }
 
                             Data = newData;
+
+                            // Adds client settings (e.g spring:cloud:config:uri, etc) back to the (new) Data dictionary
+                            AddConfigServerClientSettings();
                         }
 
                         return env;
@@ -903,7 +907,13 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         /// <returns>The HttpClient used by the provider</returns>
         protected static HttpClient GetHttpClient(ConfigServerClientSettings settings)
         {
-            return HttpClientHelper.GetHttpClient(settings.ValidateCertificates, settings.Timeout);
+            var clientHandler = new HttpClientHandler();
+            if (settings.ClientCertificate != null)
+            {
+                clientHandler.ClientCertificates.Add(settings.ClientCertificate);
+            }
+
+            return HttpClientHelper.GetHttpClient(settings.ValidateCertificates, clientHandler, settings.Timeout);
         }
 
         private IConfiguration WrapWithPlaceholderResolver(IConfiguration configuration)

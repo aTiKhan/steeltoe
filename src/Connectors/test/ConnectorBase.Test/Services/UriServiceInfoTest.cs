@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System;
+using Steeltoe.Connector.Services;
 using Xunit;
 
-namespace Steeltoe.CloudFoundry.Connector.Services.Test
+namespace Steeltoe.Connector.Services.Test
 {
     public class UriServiceInfoTest
     {
         [Fact]
         public void Constructor_CreatesExpected()
         {
-            string uri = "mysql://joe:joes_password@localhost:1527/big_db";
+            var uri = "mysql://joe:joes_password@localhost:1527/big_db";
             UriServiceInfo r1 = new TestUriServiceInfo("myId", "mysql", "localhost", 1527, "joe", "joes_password", "big_db");
             UriServiceInfo r2 = new TestUriServiceInfo("myId", uri);
 

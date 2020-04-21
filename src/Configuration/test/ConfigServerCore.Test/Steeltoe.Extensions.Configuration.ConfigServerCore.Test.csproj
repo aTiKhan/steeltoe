@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\..\versions.props" />
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;</TargetFrameworks>
   </PropertyGroup>
+  
+  <Import Project="..\..\..\..\versions.props" />
   <Import Project="..\..\..\..\sharedtest.props" />
 
   <ItemGroup>
@@ -14,10 +15,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ConfigServerCore\Steeltoe.Extensions.Configuration.ConfigServerCore.csproj" />
     <ProjectReference Include="..\ConfigServerBase.Test\Steeltoe.Extensions.Configuration.ConfigServerBase.Test.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' != 'netcoreapp3.0'">
-    <PackageReference Include="Microsoft.AspNetCore" Version="$(AspNetCoreVersion)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Steeltoe.CloudFoundry.Connector.Services;
+using Steeltoe.Common.Reflection;
+using Steeltoe.Connector.Services;
 using System;
 using System.Reflection;
 
-namespace Steeltoe.CloudFoundry.Connector.Redis
+namespace Steeltoe.Connector.Redis
 {
     public class RedisServiceConnectorFactory
     {
@@ -82,7 +83,7 @@ namespace Steeltoe.CloudFoundry.Connector.Redis
 
         private object CreateConnection(object options)
         {
-            return ConnectorHelpers.CreateInstance(ConnectorType, new object[] { options });
+            return ReflectionHelpers.CreateInstance(ConnectorType, new object[] { options });
         }
 
         private object CreateConnectionByMethod(object options)

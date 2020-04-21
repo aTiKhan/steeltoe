@@ -17,7 +17,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Steeltoe.Common.Discovery;
 using Steeltoe.Discovery.Consul.Discovery;
 using Steeltoe.Discovery.Eureka;
 using System.Collections.Generic;
@@ -38,6 +37,7 @@ namespace Steeltoe.Discovery.Client.Test
 
         private static Dictionary<string, string> consulSettings = new Dictionary<string, string>()
         {
+            ["consul:discovery:serviceName"] = "testhost",
             ["consul:discovery:enabled"] = "true",
             ["consul:discovery:failfast"] = "false",
         };
@@ -78,7 +78,6 @@ namespace Steeltoe.Discovery.Client.Test
             Assert.IsType<DiscoveryClientStartupFilter>(filter);
         }
 
-#if NETCOREAPP3_0
         [Fact]
         public async Task AddServiceDiscovery_IHostBuilder_IStartupFilterFires()
         {
@@ -95,7 +94,6 @@ namespace Steeltoe.Discovery.Client.Test
             //   but debug through and you'll see it. Also the code coverage report should provide validation
             Assert.True(true);
         }
-#endif
 
         [Fact]
         public void AddServiceDiscovery_IHostBuilder_AddsServiceDiscovery_Consul()

@@ -13,10 +13,10 @@
 // limitations under the License.
 
 using Microsoft.Extensions.Configuration;
-using Steeltoe.CloudFoundry.Connector.Services;
+using Steeltoe.Connector.Services;
 using System;
 
-namespace Steeltoe.CloudFoundry.Connector.Hystrix
+namespace Steeltoe.Connector.Hystrix
 {
     public class HystrixProviderConnectorOptions : AbstractServiceConnectorOptions
     {
@@ -55,7 +55,7 @@ namespace Steeltoe.CloudFoundry.Connector.Hystrix
 
         public string Username { get; set; }
 
-        public string Password { get; set;  }
+        public string Password { get; set; }
 
         public string VirtualHost { get; set; }
 

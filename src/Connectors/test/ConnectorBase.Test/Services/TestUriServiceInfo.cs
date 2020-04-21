@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-namespace Steeltoe.CloudFoundry.Connector.Services.Test
+using Steeltoe.Connector.Services;
+
+namespace Steeltoe.Connector.Services.Test
 {
     internal class TestUriServiceInfo : UriServiceInfo
     {

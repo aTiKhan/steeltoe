@@ -1,10 +1,12 @@
-# Steeltoe
+# Steeltoe Open Source Software
 
 [![Build Status](https://dev.azure.com/SteeltoeOSS/Steeltoe/_apis/build/status/SteeltoeOSS.steeltoe?branchName=master)](https://dev.azure.com/SteeltoeOSS/Steeltoe/_build/latest?definitionId=4&branchName=master)
 
 * [Introduction](#introduction)
+* [Project Management](#project-management)
 * [Project Repositories](#project-repositories)
 * [Roadmaps](#roadmaps)
+* [Release Types](#release-types)
 * [Getting Started](#getting-started)
 * [Getting the Code](#getting-the-code)
 * [Contributing](#contributing)
@@ -37,6 +39,12 @@ Steeltoe provides services that broadly fall into two categories:
 
 [Steeltoe is freely available](https://www.nuget.org/packages?q=steeltoe) for production application usage today. Be sure to visit the [official Steeltoe site](https://steeltoe.io/).
 
+## Project Management
+
+The Steeltoe team uses [ZenHub](https://app.zenhub.com/workspaces/steeltoe-project-5d92153f31e8dd0001222ae6/board) for our Project Management Board across our active repositories.  This is the best way to see what state each issue is in, along with issue priorization and release assignment.
+
+_Note:_ ZenHub is built on top of GitHub issues, so it reflects the updates on GitHub as well as providing a view of the project's progress.
+
 ## Project Repositories
 
 Steeltoe is fully open source and is found under the SteeltoeOSS organization on GitHub.
@@ -57,21 +65,32 @@ These are located in the [Steeltoe](https://github.com/SteeltoeOSS/steeltoe) rep
 #### Other Repositories
 
 * [Samples](https://github.com/SteeltoeOSS/Samples) - Our collection of Sample applications used as a reference for Steeltoe .NET Application development
+* [Documentation](https://github.com/SteeltoeOSS/Documentation) - Markdown versions of our documentation on the [steeltoe.io/docs](steeltoe.io/docs) site
+* [MainSite](https://github.com/SteeltoeOSS/MainSite) - All of the steeltoe.io (Blazor) website
 * [Initializr](https://github.com/SteeltoeOSS/initializr) - The [Steeltoe Initializr](https://start.steeltoe.io) source code
 * [Tooling](https://github.com/SteeltoeOSS/Tooling) - Steeltoe SDK and Tooling
 * [Dockerfiles](https://github.com/SteeltoeOSS/Dockerfiles) - Our collection of docker files we have on dockerhub
 * [eShopOnContainers](https://github.com/SteeltoeOSS/eShopOnContainers) - Sample reference microservice and container based application with added Steeltoe capabilities (Forked and updated from dotnet-architecture org)
-* [MainSite](https://github.com/SteeltoeOSS/MainSite) - All of the steeltoe.io website and documentation artifacts
+
 
 ## Roadmaps
 
 * [3.0.0](roadmaps/3.0.0.md) - In Progress
 * [2.5.0](roadmaps/2.5.0.md) - In Progress
-* [2.4.0](roadmaps/2.4.0.md) - Released
-* [2.3.0](roadmaps/2.3.0.md) - Released
-* [2.2.0](roadmaps/2.2.0.md) - Released
-* [2.1.0](roadmaps/2.1.0.md) - Released
-* [2.0.0](roadmaps/2.0.0.md) - Released
+* [2.4.0](roadmaps/2.4.0.md) - Released (11/2019)
+   * [2.4.1](https://github.com/SteeltoeOSS/steeltoe/releases/tag/2.4.1) - Released (1/2020)
+   * [2.4.2](https://github.com/SteeltoeOSS/steeltoe/releases/tag/2.4.2) - Released (2/2020)
+   * [2.4.3](https://github.com/SteeltoeOSS/steeltoe/releases/tag/2.4.3) - Released (4/2020)
+* [2.3.0](roadmaps/2.3.0.md) - Released (8/2019)
+* [2.2.0](roadmaps/2.2.0.md) - Released (3/2019)
+* [2.1.0](roadmaps/2.1.0.md) - Released (8/2018)
+* [2.0.0](roadmaps/2.0.0.md) - Released (2/2018)
+
+## Release Types
+
+* **Milestone** (i.e. M1, M2 ...) - A milestone is a release that contains a subset of the full features planned for a release. Milestone releases allow major features to be tested earlier in the release cycle.  A milestone release is not meant for production environments.
+* **Release Candidate** (i.e. RC1, RC2, ...) - Similar to a beta release.  A release candidate contains a full feature set and is available to the community for finding any major issues before the GA version is released.  There could still be source code changes to fix defects, changes to documentation, and test cases, but these releases are considered code complete. Typically, these are not meant for production environments.
+* **General Availability** (i.e. GA) - This is the full featured and fully tested release that is available to the public for use in production environments.
 
 ## Getting Started
 

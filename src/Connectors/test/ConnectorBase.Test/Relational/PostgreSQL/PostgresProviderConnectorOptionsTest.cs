@@ -13,13 +13,12 @@
 // limitations under the License.
 
 using Microsoft.Extensions.Configuration;
-using Steeltoe.CloudFoundry.Connector.Test;
 using Steeltoe.Extensions.Configuration.CloudFoundry;
 using System;
 using System.Collections.Generic;
 using Xunit;
 
-namespace Steeltoe.CloudFoundry.Connector.PostgreSql.Test
+namespace Steeltoe.Connector.PostgreSql.Test
 {
     public class PostgresProviderConnectorOptionsTest
     {
@@ -46,7 +45,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.Test
                 ["postgres:client:searchpath"] = "searchpath"
             };
 
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
 
@@ -67,7 +66,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.Test
             {
                 ["postgres:client:ConnectionString"] = "Server=fake;Database=test;User Id=steeltoe;Password=password;"
             };
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
 
@@ -92,7 +91,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.Test
                 ["postgres:client:SearchPath"] = "fakeSchema",
             };
             var expected = "Host=fake-db.host;Port=3000;Username=fakeUsername;Password=fakePassword;Database=fakeDB;Search Path=fakeSchema;";
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
 
@@ -118,7 +117,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.Test
             Environment.SetEnvironmentVariable("VCAP_SERVICES", PostgresTestHelpers.SingleServerVCAP_EDB);
 
             // add settings to config
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             configurationBuilder.AddEnvironmentVariables();
             configurationBuilder.AddCloudFoundry();
@@ -147,7 +146,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql.Test
             Environment.SetEnvironmentVariable("VCAP_SERVICES", PostgresTestHelpers.SingleServerVCAP_EDB);
 
             // add settings to config
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             configurationBuilder.AddEnvironmentVariables();
             configurationBuilder.AddCloudFoundry();

@@ -16,7 +16,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Text;
 
-namespace Steeltoe.CloudFoundry.Connector.PostgreSql
+namespace Steeltoe.Connector.PostgreSql
 {
     public class PostgresProviderConnectorOptions : AbstractServiceConnectorOptions
     {
@@ -51,7 +51,7 @@ namespace Steeltoe.CloudFoundry.Connector.PostgreSql
 
         public string Username { get; set; }
 
-        public string Password { get; set;  }
+        public string Password { get; set; }
 
         public string Database { get; set; }
 

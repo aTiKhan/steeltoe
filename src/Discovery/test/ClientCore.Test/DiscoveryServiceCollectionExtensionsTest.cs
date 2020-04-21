@@ -13,21 +13,21 @@
 // limitations under the License.
 
 using Consul;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-#if NETCOREAPP3_0
 using Microsoft.Extensions.Hosting;
-#endif
-using Steeltoe.CloudFoundry.Connector;
 using Steeltoe.Common;
 using Steeltoe.Common.Discovery;
 using Steeltoe.Common.HealthChecks;
+using Steeltoe.Common.Options;
+using Steeltoe.Common.Security;
+using Steeltoe.Connector;
 using Steeltoe.Discovery.Consul.Discovery;
 using Steeltoe.Discovery.Consul.Registry;
 using Steeltoe.Discovery.Eureka;
 using Steeltoe.Extensions.Configuration.CloudFoundry;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using Xunit;
@@ -83,7 +83,7 @@ namespace Steeltoe.Discovery.Client.Test
         {
             // Arrange
             IServiceCollection services = new ServiceCollection();
-            DiscoveryOptions discoveryOptions = new DiscoveryOptions();
+            var discoveryOptions = new DiscoveryOptions();
 
             // Act and Assert
             var ex = Assert.Throws<ArgumentException>(() => DiscoveryServiceCollectionExtensions.AddDiscoveryClient(services, discoveryOptions));
@@ -123,9 +123,9 @@ namespace Steeltoe.Discovery.Client.Test
                 }";
 
             var path = TestHelpers.CreateTempFile(appsettings);
-            string directory = Path.GetDirectoryName(path);
-            string fileName = Path.GetFileName(path);
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var directory = Path.GetDirectoryName(path);
+            var fileName = Path.GetFileName(path);
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.SetBasePath(directory);
 
             configurationBuilder.AddJsonFile(fileName);
@@ -133,15 +133,41 @@ namespace Steeltoe.Discovery.Client.Test
 
             var services = new ServiceCollection();
             services.AddOptions();
-#if NETCOREAPP3_0
             services.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
-#else
-            services.AddSingleton<IApplicationLifetime>(new TestApplicationLifetime());
-#endif
             services.AddDiscoveryClient(config);
 
             var service = services.BuildServiceProvider().GetService<IDiscoveryClient>();
             Assert.NotNull(service);
+        }
+
+        [Fact]
+        public void AddDiscoveryClient_WithEurekaClientCertConfig_AddsDiscoveryClient()
+        {
+            // Arrange
+            var appsettings = new Dictionary<string, string>()
+            {
+                { "spring:application:name", "myName" },
+                { "eureka:client:serviceUrl", "http://localhost:8761/eureka/" }
+            };
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(appsettings)
+                .AddPemFiles("instance.crt", "instance.key")
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddOptions();
+            services.Configure<CertificateOptions>(config);
+            services.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
+            services.AddDiscoveryClient(config);
+
+            // act
+            var serviceProvider = services.BuildServiceProvider();
+            var discoveryClient = serviceProvider.GetService<IDiscoveryClient>();
+            var handlerProvider = serviceProvider.GetService<IHttpClientHandlerProvider>();
+
+            // assert
+            Assert.NotNull(discoveryClient);
+            Assert.NotNull(handlerProvider);
         }
 
         [Fact]
@@ -157,9 +183,9 @@ namespace Steeltoe.Discovery.Client.Test
                     }
                 }";
             var path = TestHelpers.CreateTempFile(appsettings);
-            string directory = Path.GetDirectoryName(path);
-            string fileName = Path.GetFileName(path);
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var directory = Path.GetDirectoryName(path);
+            var fileName = Path.GetFileName(path);
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.SetBasePath(directory);
 
             configurationBuilder.AddJsonFile(fileName);
@@ -173,7 +199,7 @@ namespace Steeltoe.Discovery.Client.Test
         public void AddDiscoveryClient_WithDiscoveryOptions_AddsDiscoveryClient()
         {
             // Arrange
-            DiscoveryOptions options = new DiscoveryOptions()
+            var options = new DiscoveryOptions()
             {
                 ClientType = DiscoveryClientType.EUREKA,
                 ClientOptions = new EurekaClientOptions()
@@ -184,11 +210,7 @@ namespace Steeltoe.Discovery.Client.Test
             };
 
             var services = new ServiceCollection();
-#if NETCOREAPP3_0
             services.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
-#else
-            services.AddSingleton<IApplicationLifetime>(new TestApplicationLifetime());
-#endif
             services.AddDiscoveryClient(options);
 
             var service = services.BuildServiceProvider().GetService<IDiscoveryClient>();
@@ -199,7 +221,7 @@ namespace Steeltoe.Discovery.Client.Test
         public void AddDiscoveryClient_AddsEurekaServerHealthContributor()
         {
             // Arrange
-            DiscoveryOptions options = new DiscoveryOptions()
+            var options = new DiscoveryOptions()
             {
                 ClientType = DiscoveryClientType.EUREKA,
                 ClientOptions = new EurekaClientOptions()
@@ -210,11 +232,7 @@ namespace Steeltoe.Discovery.Client.Test
             };
 
             var services = new ServiceCollection();
-#if NETCOREAPP3_0
             services.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
-#else
-            services.AddSingleton<IApplicationLifetime>(new TestApplicationLifetime());
-#endif
             services.AddDiscoveryClient(options);
 
             var built = services.BuildServiceProvider();
@@ -228,7 +246,7 @@ namespace Steeltoe.Discovery.Client.Test
         public void AddDiscoveryClient_WiresUp_HealthCheckerHandler()
         {
             // Arrange
-            DiscoveryOptions options = new DiscoveryOptions()
+            var options = new DiscoveryOptions()
             {
                 ClientType = DiscoveryClientType.EUREKA,
                 ClientOptions = new EurekaClientOptions()
@@ -239,11 +257,7 @@ namespace Steeltoe.Discovery.Client.Test
             };
 
             var services = new ServiceCollection();
-#if NETCOREAPP3_0
             services.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
-#else
-            services.AddSingleton<IApplicationLifetime>(new TestApplicationLifetime());
-#endif
             services.AddDiscoveryClient(options);
             services.AddSingleton<IHealthCheckHandler, ScopedEurekaHealthCheckHandler>();
 
@@ -252,7 +266,7 @@ namespace Steeltoe.Discovery.Client.Test
             Assert.NotNull(service);
             var eurekaService = service as EurekaDiscoveryClient;
             Assert.IsType<ScopedEurekaHealthCheckHandler>(eurekaService.HealthCheckHandler);
-            ScopedEurekaHealthCheckHandler handler = eurekaService.HealthCheckHandler as ScopedEurekaHealthCheckHandler;
+            var handler = eurekaService.HealthCheckHandler as ScopedEurekaHealthCheckHandler;
             Assert.NotNull(handler._scopeFactory);
         }
 
@@ -260,7 +274,7 @@ namespace Steeltoe.Discovery.Client.Test
         public void AddDiscoveryClient_WithDiscoveryOptions_MissingOptions_Throws()
         {
             // Arrange
-            DiscoveryOptions options = new DiscoveryOptions()
+            var options = new DiscoveryOptions()
             {
                 ClientType = DiscoveryClientType.EUREKA,
                 ClientOptions = null,
@@ -268,11 +282,7 @@ namespace Steeltoe.Discovery.Client.Test
             };
 
             var services = new ServiceCollection();
-#if NETCOREAPP3_0
             services.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
-#else
-            services.AddSingleton<IApplicationLifetime>(new TestApplicationLifetime());
-#endif
             Assert.Throws<ArgumentException>(() => services.AddDiscoveryClient(options));
         }
 
@@ -281,11 +291,7 @@ namespace Steeltoe.Discovery.Client.Test
         {
             // Arrange
             var services = new ServiceCollection();
-#if NETCOREAPP3_0
             services.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
-#else
-            services.AddSingleton<IApplicationLifetime>(new TestApplicationLifetime());
-#endif
             services.AddDiscoveryClient((options) =>
            {
                options.ClientType = DiscoveryClientType.EUREKA;
@@ -305,7 +311,7 @@ namespace Steeltoe.Discovery.Client.Test
         public void AddDiscoveryClient_WithDiscoveryOptionsAndHttpClient_AddsDiscoveryClient()
         {
             // Arrange
-            DiscoveryOptions options = new DiscoveryOptions()
+            var options = new DiscoveryOptions()
             {
                 ClientType = DiscoveryClientType.EUREKA,
                 ClientOptions = new EurekaClientOptions()
@@ -319,13 +325,9 @@ namespace Steeltoe.Discovery.Client.Test
 
             // Add provider to be injected into HttpClient
             var hprovider = new TestClientHandlerProvider();
-            services.AddSingleton<IEurekaDiscoveryClientHandlerProvider>(hprovider);
+            services.AddSingleton<IHttpClientHandlerProvider>(hprovider);
 
-#if NETCOREAPP3_0
             services.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
-#else
-            services.AddSingleton<IApplicationLifetime>(new TestApplicationLifetime());
-#endif
             services.AddDiscoveryClient(options);
 
             var service = services.BuildServiceProvider().GetService<IDiscoveryClient>();
@@ -353,7 +355,7 @@ namespace Steeltoe.Discovery.Client.Test
         {
             // Arrange
             IServiceCollection services = new ServiceCollection();
-            IConfigurationRoot config = new ConfigurationBuilder().Build();
+            var config = new ConfigurationBuilder().Build();
 
             // Act and Assert
             var ex = Assert.Throws<ConnectorException>(() => DiscoveryServiceCollectionExtensions.AddDiscoveryClient(services, config, "foobar"));
@@ -435,7 +437,7 @@ namespace Steeltoe.Discovery.Client.Test
             Environment.SetEnvironmentVariable("VCAP_APPLICATION", env1);
             Environment.SetEnvironmentVariable("VCAP_SERVICES", env2);
 
-            ConfigurationBuilder builder = new ConfigurationBuilder();
+            var builder = new ConfigurationBuilder();
             builder.AddCloudFoundry();
             var config = builder.Build();
 
@@ -467,15 +469,16 @@ namespace Steeltoe.Discovery.Client.Test
                 }";
 
             var path = TestHelpers.CreateTempFile(appsettings);
-            string directory = Path.GetDirectoryName(path);
-            string fileName = Path.GetFileName(path);
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var directory = Path.GetDirectoryName(path);
+            var fileName = Path.GetFileName(path);
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.SetBasePath(directory);
 
             configurationBuilder.AddJsonFile(fileName);
             var config = configurationBuilder.Build();
 
             var services = new ServiceCollection();
+            services.AddSingleton<IConfiguration>(config);
             services.AddOptions();
             services.AddDiscoveryClient(config);
             var provider = services.BuildServiceProvider();
@@ -496,7 +499,7 @@ namespace Steeltoe.Discovery.Client.Test
             Assert.NotNull(service6);
         }
 
-        public class TestClientHandlerProvider : IEurekaDiscoveryClientHandlerProvider
+        public class TestClientHandlerProvider : IHttpClientHandlerProvider
         {
             public bool Called { get; set; } = false;
 

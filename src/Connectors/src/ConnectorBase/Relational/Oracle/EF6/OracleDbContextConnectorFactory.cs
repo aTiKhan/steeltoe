@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Steeltoe.CloudFoundry.Connector.Services;
+using Steeltoe.Common.Reflection;
+using Steeltoe.Connector.Services;
 using System;
 
-namespace Steeltoe.CloudFoundry.Connector.Oracle.EF6
+namespace Steeltoe.Connector.Oracle.EF6
 {
     public class OracleDbContextConnectorFactory : OracleProviderConnectorFactory
     {
@@ -38,7 +39,7 @@ namespace Steeltoe.CloudFoundry.Connector.Oracle.EF6
             object result = null;
             if (connectionString != null)
             {
-                result = ConnectorHelpers.CreateInstance(ConnectorType, new object[] { connectionString });
+                result = ReflectionHelpers.CreateInstance(ConnectorType, new object[] { connectionString });
             }
 
             if (result == null)

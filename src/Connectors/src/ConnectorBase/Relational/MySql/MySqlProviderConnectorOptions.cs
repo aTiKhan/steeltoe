@@ -16,7 +16,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Text;
 
-namespace Steeltoe.CloudFoundry.Connector.MySql
+namespace Steeltoe.Connector.MySql
 {
     /// <summary>
     /// Currently enabling properties supported by BOTH of these connectors:
@@ -101,7 +101,7 @@ namespace Steeltoe.CloudFoundry.Connector.MySql
                 return ConnectionString;
             }
 
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             AddKeyValue(sb, nameof(Server), Server);
             AddKeyValue(sb, nameof(Port), Port);
             AddKeyValue(sb, nameof(Username), Username);

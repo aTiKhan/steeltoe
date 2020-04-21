@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Steeltoe.Extensions.Configuration.CloudFoundry;
-using System;
+using Steeltoe.Extensions.Configuration;
 using System.Collections.Generic;
 
-namespace Steeltoe.CloudFoundry.Connector.Services
+namespace Steeltoe.Connector.Services
 {
     public class HystrixRabbitMQServiceInfoFactory : ServiceInfoFactory
     {
@@ -37,11 +36,11 @@ namespace Steeltoe.CloudFoundry.Connector.Services
         public override IServiceInfo Create(Service binding)
         {
             var amqpCredentials = binding.Credentials["amqp"];
-            string uri = GetUriFromCredentials(amqpCredentials);
-            bool sslEnabled = GetBoolFromCredentials(amqpCredentials, "ssl");
+            var uri = GetUriFromCredentials(amqpCredentials);
+            var sslEnabled = GetBoolFromCredentials(amqpCredentials, "ssl");
             if (amqpCredentials.ContainsKey("uris"))
             {
-                List<string> uris = GetListFromCredentials(amqpCredentials, "uris");
+                var uris = GetListFromCredentials(amqpCredentials, "uris");
                 return new HystrixRabbitMQServiceInfo(binding.Name, uri, uris, sslEnabled);
             }
 
@@ -53,10 +52,10 @@ namespace Steeltoe.CloudFoundry.Connector.Services
             if (credentials.ContainsKey("amqp"))
             {
                 var amqpDict = credentials["amqp"];
-                string uri = GetStringFromCredentials(amqpDict, UriKeys);
+                var uri = GetStringFromCredentials(amqpDict, UriKeys);
                 if (uri != null)
                 {
-                    foreach (string uriScheme in UriSchemes)
+                    foreach (var uriScheme in UriSchemes)
                     {
                         if (uri.StartsWith(uriScheme + "://"))
                         {

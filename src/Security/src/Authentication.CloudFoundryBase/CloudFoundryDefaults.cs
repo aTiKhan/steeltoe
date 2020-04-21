@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System;
-
 namespace Steeltoe.Security.Authentication.CloudFoundry
 {
     public static class CloudFoundryDefaults
@@ -30,9 +28,6 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
         public const string CheckTokenUri = "/check_token";
         public const string JwtTokenUri = "/token_keys";
 
-        [Obsolete("Use JwtTokenUri instead")]
-        public const string JwtTokenKey = JwtTokenUri;
-
         public const string OAuthServiceUrl = "Default_OAuthServiceUrl";
         public const string ClientId = "Default_ClientId";
         public const string ClientSecret = "Default_ClientSecret";
@@ -48,5 +43,8 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
         public const string ParamsGrantType = "grant_type";
         public const string ParamsTokenFormat = "token_format";
         public const string ParamsCode = "code";
+
+        public const string SameOrganizationAuthorizationPolicy = "sameorg";
+        public const string SameSpaceAuthorizationPolicy = "samespace";
     }
 }

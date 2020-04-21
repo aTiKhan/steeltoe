@@ -13,10 +13,8 @@
 // limitations under the License.
 
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Reflection;
 
-namespace Steeltoe.CloudFoundry.Connector
+namespace Steeltoe.Connector
 {
     public class ConnectionStringManager
     {

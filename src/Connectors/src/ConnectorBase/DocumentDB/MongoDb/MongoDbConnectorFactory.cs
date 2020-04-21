@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Steeltoe.CloudFoundry.Connector.Services;
+using Steeltoe.Common.Reflection;
+using Steeltoe.Connector.Services;
 using System;
 
-namespace Steeltoe.CloudFoundry.Connector.MongoDb
+namespace Steeltoe.Connector.MongoDb
 {
     public class MongoDbConnectorFactory
     {
@@ -60,7 +61,7 @@ namespace Steeltoe.CloudFoundry.Connector.MongoDb
 
         public virtual object CreateConnection(string connectionString)
         {
-            return ConnectorHelpers.CreateInstance(ConnectorType, new object[] { connectionString });
+            return ReflectionHelpers.CreateInstance(ConnectorType, new object[] { connectionString });
         }
     }
 }

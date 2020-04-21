@@ -24,7 +24,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace Steeltoe.Extensions.Configuration.PlaceholderCore.Test
+namespace Steeltoe.Extensions.Configuration.Placeholder.Test
 {
     public class PlaceholderServiceCollectionExtensionsTest
     {
@@ -136,7 +136,6 @@ namespace Steeltoe.Extensions.Configuration.PlaceholderCore.Test
             }
         }
 
-#if NETCOREAPP3_0
         [Fact]
         public void AddPlaceholderResolver_HostBuilder_WrapsApplicationsConfiguration()
         {
@@ -180,6 +179,5 @@ namespace Steeltoe.Extensions.Configuration.PlaceholderCore.Test
             var config = server.Services.GetServices<IConfiguration>().SingleOrDefault();
             Assert.Equal("myName", config["spring:cloud:config:name"]);
         }
-#endif
     }
 }

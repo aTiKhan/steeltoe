@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using Xunit;
 
-namespace Steeltoe.CloudFoundry.Connector.Oracle.Test
+namespace Steeltoe.Connector.Oracle.Test
 {
     public class OracleProviderConnectorOptionsTest
     {
@@ -43,7 +43,7 @@ namespace Steeltoe.CloudFoundry.Connector.Oracle.Test
                 ["oracle:client:username"] = "username"
             };
 
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
 
@@ -63,7 +63,7 @@ namespace Steeltoe.CloudFoundry.Connector.Oracle.Test
             {
                 ["oracle:client:ConnectionString"] = "Data Source=localhost:1521/orclpdb1;User Id=hr;Password=hr;"
             };
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
 
