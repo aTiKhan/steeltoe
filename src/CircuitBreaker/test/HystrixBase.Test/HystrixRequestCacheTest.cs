@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency;
 using System;
@@ -22,7 +12,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 {
     public class HystrixRequestCacheTest : HystrixTestBase
     {
-        private ITestOutputHelper output;
+        private readonly ITestOutputHelper output;
 
         public HystrixRequestCacheTest(ITestOutputHelper output)
             : base()
@@ -35,17 +25,17 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         {
             try
             {
-                Task<string> t1 = Task.FromResult("a1");
-                Task<string> t2 = Task.FromResult("a2");
-                Task<string> t3 = Task.FromResult("b1");
+                var t1 = Task.FromResult("a1");
+                var t2 = Task.FromResult("a2");
+                var t3 = Task.FromResult("b1");
 
-                HystrixRequestCache cache1 = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1"));
+                var cache1 = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1"));
                 cache1.PutIfAbsent("valueA", t1);
                 cache1.PutIfAbsent("valueA", t2);
                 cache1.PutIfAbsent("valueB", t3);
 
-                HystrixRequestCache cache2 = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command2"));
-                Task<string> t4 = Task.FromResult("a3");
+                var cache2 = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command2"));
+                var t4 = Task.FromResult("a3");
                 cache2.PutIfAbsent("valueA", t4);
 
                 Assert.Equal("a1", cache1.Get<Task<string>>("valueA").GetAwaiter().GetResult());
@@ -68,7 +58,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             try
             {
                 // with a new context  the instance should have nothing in it
-                HystrixRequestCache cache = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1"));
+                var cache = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1"));
                 Assert.Null(cache.Get<Task<string>>("valueA"));
                 Assert.Null(cache.Get<Task<string>>("valueB"));
             }
@@ -81,7 +71,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         [Fact]
         public void TestCacheWithoutContext()
         {
-            this.context.Dispose();
+            context.Dispose();
 
             Assert.Throws<InvalidOperationException>(() => { HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1")).Get<Task<string>>("any"); });
         }
@@ -89,11 +79,11 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         [Fact]
         public void TestClearCache()
         {
-            HystrixConcurrencyStrategy strategy = HystrixConcurrencyStrategyDefault.GetInstance();
+            var strategy = HystrixConcurrencyStrategyDefault.GetInstance();
             try
             {
-                HystrixRequestCache cache1 = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1"));
-                Task<string> t1 = Task.FromResult("a1");
+                var cache1 = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1"));
+                var t1 = Task.FromResult("a1");
                 cache1.PutIfAbsent("valueA", t1);
                 Assert.Equal("a1", cache1.Get<Task<string>>("valueA").GetAwaiter().GetResult());
                 cache1.Clear("valueA");
@@ -109,11 +99,11 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         [Fact]
         public void TestCacheWithoutRequestContext()
         {
-            HystrixConcurrencyStrategy strategy = HystrixConcurrencyStrategyDefault.GetInstance();
+            var strategy = HystrixConcurrencyStrategyDefault.GetInstance();
             context.Dispose();
 
-            HystrixRequestCache cache1 = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1"));
-            Task<string> t1 = Task.FromResult("a1");
+            var cache1 = HystrixRequestCache.GetInstance(HystrixCommandKeyDefault.AsKey("command1"));
+            var t1 = Task.FromResult("a1");
 
             // this should fail, as there's no HystrixRequestContext instance to place the cache into
             Assert.Throws<InvalidOperationException>(() => { cache1.PutIfAbsent("valueA", t1); });

@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;net5.0;</TargetFrameworks>
   </PropertyGroup>
   
   <Import Project="..\..\..\..\versions.props" />
@@ -15,7 +15,7 @@
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="$(AspNetCoreVersion)" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Logging\src\SerilogDynamicLoggerCore\Steeltoe.Extensions.Logging.SerilogDynamicLoggerCore.csproj" />
+    <ProjectReference Include="..\..\..\Logging\src\DynamicSerilogBase\Steeltoe.Extensions.Logging.DynamicSerilogBase.csproj" />
     <ProjectReference Include="..\..\src\CloudFoundryCore\Steeltoe.Management.CloudFoundryCore.csproj" />
   </ItemGroup>
 </Project>

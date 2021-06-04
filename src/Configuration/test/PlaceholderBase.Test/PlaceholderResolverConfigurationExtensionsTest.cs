@@ -1,20 +1,9 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Steeltoe.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -77,7 +66,9 @@ namespace Steeltoe.Extensions.Configuration.Placeholder.Test
             Assert.NotNull(provider._logger);
         }
 
+        // Mac issue https://github.com/dotnet/runtime/issues/30056
         [Fact]
+        [Trait("Category", "SkipOnMacOS")]
         public void AddPlaceholderResolver_JsonAppSettingsResolvesPlaceholders()
         {
             // Arrange
@@ -101,7 +92,7 @@ namespace Steeltoe.Extensions.Configuration.Placeholder.Test
             ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.SetBasePath(directory);
 
-            configurationBuilder.AddJsonFile(fileName);
+            configurationBuilder.AddJsonFile(fileName, false, false);
 
             // Act and Assert
             configurationBuilder.AddPlaceholderResolver();
@@ -110,7 +101,9 @@ namespace Steeltoe.Extensions.Configuration.Placeholder.Test
             Assert.Equal("myName", config["spring:cloud:config:name"]);
         }
 
+        // Mac issue https://github.com/dotnet/runtime/issues/30056
         [Fact]
+        [Trait("Category", "SkipOnMacOS")]
         public void AddPlaceholderResolver_XmlAppSettingsResolvesPlaceholders()
         {
             // Arrange
@@ -133,7 +126,7 @@ namespace Steeltoe.Extensions.Configuration.Placeholder.Test
             ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.SetBasePath(directory);
 
-            configurationBuilder.AddXmlFile(fileName);
+            configurationBuilder.AddXmlFile(fileName, false, false);
 
             // Act and Assert
             configurationBuilder.AddPlaceholderResolver();
@@ -142,7 +135,9 @@ namespace Steeltoe.Extensions.Configuration.Placeholder.Test
             Assert.Equal("myName", config["spring:cloud:config:name"]);
         }
 
+        // Mac issue https://github.com/dotnet/runtime/issues/30056
         [Fact]
+        [Trait("Category", "SkipOnMacOS")]
         public void AddPlaceholderResolver_IniAppSettingsResolvesPlaceholders()
         {
             // Arrange
@@ -158,7 +153,7 @@ namespace Steeltoe.Extensions.Configuration.Placeholder.Test
             ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.SetBasePath(directory);
 
-            configurationBuilder.AddIniFile(fileName);
+            configurationBuilder.AddIniFile(fileName, false, false);
 
             // Act and Assert
             configurationBuilder.AddPlaceholderResolver();
@@ -187,7 +182,9 @@ namespace Steeltoe.Extensions.Configuration.Placeholder.Test
             Assert.Equal("myName", config["spring:cloud:config:name"]);
         }
 
+        // Mac issue https://github.com/dotnet/runtime/issues/30056
         [Fact]
+        [Trait("Category", "SkipOnMacOS")]
         public void AddPlaceholderResolver_HandlesRecursivePlaceHolders()
         {
             var appsettingsJson = @"
@@ -232,9 +229,9 @@ namespace Steeltoe.Extensions.Configuration.Placeholder.Test
             ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.SetBasePath(directory);
 
-            configurationBuilder.AddJsonFile(jsonfileName);
-            configurationBuilder.AddXmlFile(xmlfileName);
-            configurationBuilder.AddIniFile(inifileName);
+            configurationBuilder.AddJsonFile(jsonfileName, false, false);
+            configurationBuilder.AddXmlFile(xmlfileName, false, false);
+            configurationBuilder.AddIniFile(inifileName, false, false);
             configurationBuilder.AddCommandLine(appsettingsLine);
 
             // Act and Assert

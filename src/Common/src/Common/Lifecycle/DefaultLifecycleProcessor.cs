@@ -1,17 +1,9 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
+using Microsoft.Extensions.Logging;
+using Steeltoe.Common.Contexts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,13 +11,18 @@ using System.Threading.Tasks;
 
 namespace Steeltoe.Common.Lifecycle
 {
+#pragma warning disable S3881 // "IDisposable" should be implemented correctly
     public class DefaultLifecycleProcessor : ILifecycleProcessor
+#pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
-        private readonly List<ILifecycle> _lifecyclesServices;
+        private readonly ILogger _logger;
+        private readonly IApplicationContext _context;
+        private List<ILifecycle> _lifecyclesServices;
 
-        public DefaultLifecycleProcessor(IEnumerable<ILifecycle> lifecyclesServices)
+        public DefaultLifecycleProcessor(IApplicationContext context, ILogger logger = null)
         {
-            _lifecyclesServices = lifecyclesServices.ToList();
+            _context = context;
+            _logger = logger;
         }
 
         public int TimeoutPerShutdownPhase { get; set; } = 30000;
@@ -34,6 +31,7 @@ namespace Steeltoe.Common.Lifecycle
 
         public async Task Start()
         {
+            BuildServicesList();
             await StartServices(false);
             IsRunning = true;
         }
@@ -46,19 +44,18 @@ namespace Steeltoe.Common.Lifecycle
 
         public async Task OnRefresh()
         {
+            BuildServicesList();
             await StartServices(true);
             IsRunning = true;
         }
 
-        public async Task OnClose()
-        {
-            await StopServices();
-            IsRunning = false;
-        }
+        public async Task OnClose() => await Stop();
+
+        public void Dispose() => OnClose().Wait();
 
         internal static int GetPhase(ILifecycle bean)
         {
-            return bean is IPhased ? ((IPhased)bean).Phase : 0;
+            return bean is IPhased phased ? phased.Phase : 0;
         }
 
         private async Task StartServices(bool autoStartupOnly)
@@ -66,13 +63,13 @@ namespace Steeltoe.Common.Lifecycle
             var phases = new Dictionary<int, LifecycleGroup>();
             foreach (var service in _lifecyclesServices)
             {
-                if (!autoStartupOnly || (service is ISmartLifecycle && ((ISmartLifecycle)service).IsAutoStartup))
+                if (!autoStartupOnly || (service is ISmartLifecycle lifecycle && lifecycle.IsAutoStartup))
                 {
                     var phase = GetPhase(service);
                     phases.TryGetValue(phase, out var group);
                     if (group == null)
                     {
-                        group = new LifecycleGroup(phase, TimeoutPerShutdownPhase, autoStartupOnly);
+                        group = new LifecycleGroup(TimeoutPerShutdownPhase, autoStartupOnly, _logger);
                         phases.Add(phase, group);
                     }
 
@@ -100,7 +97,7 @@ namespace Steeltoe.Common.Lifecycle
                 phases.TryGetValue(phase, out var group);
                 if (group == null)
                 {
-                    group = new LifecycleGroup(phase, TimeoutPerShutdownPhase, false);
+                    group = new LifecycleGroup(TimeoutPerShutdownPhase, false, _logger);
                     phases.Add(phase, group);
                 }
 
@@ -116,6 +113,25 @@ namespace Steeltoe.Common.Lifecycle
                 {
                     await phases[key].Stop();
                 }
+            }
+        }
+
+        private void BuildServicesList()
+        {
+            if (_lifecyclesServices == null)
+            {
+                var lifeCycles = _context.GetServices<ILifecycle>().ToList();
+                var smartCycles = _context.GetServices<ISmartLifecycle>();
+
+                foreach (var smart in smartCycles)
+                {
+                    if (!lifeCycles.Contains(smart))
+                    {
+                        lifeCycles.Add(smart);
+                    }
+                }
+
+                _lifecyclesServices = lifeCycles;
             }
         }
 
@@ -140,41 +156,35 @@ namespace Steeltoe.Common.Lifecycle
 
         private class LifecycleGroup
         {
-            private readonly int phase;
+            private readonly int _timeout;
 
-            private readonly int timeout;
+            private readonly bool _autoStartupOnly;
 
-            private readonly bool autoStartupOnly;
+            private readonly List<LifecycleGroupMember> _members = new List<LifecycleGroupMember>();
 
-            private readonly List<LifecycleGroupMember> members = new List<LifecycleGroupMember>();
+            private readonly ILogger _logger;
 
-            private int smartMemberCount;
-
-            public LifecycleGroup(int phase, int timeout, bool autoStartupOnly)
+            public LifecycleGroup(int timeout, bool autoStartupOnly, ILogger logger = null)
             {
-                this.phase = phase;
-                this.timeout = timeout;
-                this.autoStartupOnly = autoStartupOnly;
+                _timeout = timeout;
+                _autoStartupOnly = autoStartupOnly;
+                _logger = logger;
             }
 
             public void Add(ILifecycle bean)
             {
-                members.Add(new LifecycleGroupMember(bean));
-                if (bean is ISmartLifecycle)
-                {
-                    smartMemberCount++;
-                }
+                _members.Add(new LifecycleGroupMember(bean));
             }
 
             public async Task Start()
             {
-                if (members.Count <= 0)
+                if (_members.Count <= 0)
                 {
                     return;
                 }
 
-                members.Sort();
-                foreach (var member in members)
+                _members.Sort();
+                foreach (var member in _members)
                 {
                     await DoStart(member.Bean);
                 }
@@ -182,34 +192,34 @@ namespace Steeltoe.Common.Lifecycle
 
             public Task Stop()
             {
-                if (members.Count <= 0)
+                if (_members.Count <= 0)
                 {
                     return Task.CompletedTask;
                 }
 
-                members.Sort();
-                members.Reverse();
+                _members.Sort();
+                _members.Reverse();
 
                 var tasks = new List<Task>();
-                foreach (var member in members)
+                foreach (var member in _members)
                 {
                     tasks.Add(DoStop(member.Bean));
                 }
 
                 try
                 {
-                    Task.WaitAll(tasks.ToArray(), timeout);
+                    Task.WaitAll(tasks.ToArray(), _timeout);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    // Log
+                    _logger?.LogError(e, "Exception waiting for lifecycle tasks to stop");
                 }
 
                 foreach (var task in tasks)
                 {
                     if (!task.IsCompleted)
                     {
-                        // TODO: Log each that didn't stop
+                        _logger?.LogWarning("Not all lifecycle tasks completed");
                         break;
                     }
                 }
@@ -219,7 +229,7 @@ namespace Steeltoe.Common.Lifecycle
 
             private async Task DoStart(ILifecycle bean)
             {
-                if (bean != null && bean != this && !bean.IsRunning && (!autoStartupOnly || !(bean is ISmartLifecycle) || ((ISmartLifecycle)bean).IsAutoStartup))
+                if (bean != null && bean != this && !bean.IsRunning && (!_autoStartupOnly || bean is not ISmartLifecycle lifecycle || lifecycle.IsAutoStartup))
                 {
                     try
                     {
@@ -227,7 +237,7 @@ namespace Steeltoe.Common.Lifecycle
                     }
                     catch (Exception ex)
                     {
-                        throw new LifecycleException("Failed to start bean '" + bean + "'", ex);
+                        throw new LifecycleException("Failed to start bean(service) '" + bean + "'", ex);
                     }
                 }
             }

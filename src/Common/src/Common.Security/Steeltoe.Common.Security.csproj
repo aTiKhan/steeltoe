@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1</TargetFrameworks>
     <Description>Steeltoe common library for security</Description>
     <PackageTags>NET Core;NET Framework;certificates</PackageTags>
   </PropertyGroup>
@@ -16,11 +16,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(ExtensionsVersion)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(CI_BUILD)' == ''">
+  <ItemGroup>
     <ProjectReference Include="..\Abstractions\Steeltoe.Common.Abstractions.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(CI_BUILD)' == 'True'">
-    <PackageReference Include="Steeltoe.Common.Abstractions" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
   </ItemGroup>
 </Project>

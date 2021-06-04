@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.IdentityModel.Tokens;
 using Steeltoe.Common;
@@ -18,10 +8,8 @@ using Steeltoe.Common.Http;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Security;
 using System.Threading.Tasks;
 
 namespace Steeltoe.Security.Authentication.CloudFoundry
@@ -33,6 +21,7 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
         private readonly string _jwtKeyUrl;
         private readonly HttpMessageHandler _httpHandler;
         private readonly bool _validateCertificates;
+        private HttpClient _httpClient;
 
         public CloudFoundryTokenKeyResolver(string jwtKeyUrl, HttpMessageHandler httpHandler, bool validateCertificates)
         {
@@ -48,15 +37,15 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
 
         public virtual IEnumerable<SecurityKey> ResolveSigningKey(string token, SecurityToken securityToken, string kid, TokenValidationParameters validationParameters)
         {
-            if (Resolved.TryGetValue(kid, out SecurityKey resolved))
+            if (Resolved.TryGetValue(kid, out var resolved))
             {
                 return new List<SecurityKey> { resolved };
             }
 
-            JsonWebKeySet keyset = FetchKeySet().GetAwaiter().GetResult();
+            var keyset = FetchKeySet().GetAwaiter().GetResult();
             if (keyset != null)
             {
-                foreach (JsonWebKey key in keyset.Keys)
+                foreach (var key in keyset.Keys)
                 {
                     FixupKey(key);
                     Resolved[key.Kid] = key;
@@ -75,7 +64,7 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
         {
             if (Platform.IsFullFramework)
             {
-                byte[] existing = Base64UrlEncoder.DecodeBytes(key.N);
+                var existing = Base64UrlEncoder.DecodeBytes(key.N);
                 TrimKey(key, existing);
             }
 
@@ -87,12 +76,12 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
             var requestMessage = new HttpRequestMessage(HttpMethod.Get, _jwtKeyUrl);
             requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            HttpClient client = GetHttpClient();
+            var client = GetHttpClient();
 
             HttpClientHelper.ConfigureCertificateValidation(
                 _validateCertificates,
-                out SecurityProtocolType prevProtocols,
-                out RemoteCertificateValidationCallback prevValidator);
+                out var prevProtocols,
+                out var prevValidator);
 
             HttpResponseMessage response = null;
             try
@@ -120,19 +109,27 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
 
         public virtual HttpClient GetHttpClient()
         {
-            if (_httpHandler != null)
+            if (_httpClient == null)
             {
-                return new HttpClient(_httpHandler);
+                if (_httpHandler is null)
+                {
+                    const int DefaultHttpClientTimeoutMillis = 100000;
+                    _httpClient = HttpClientHelper.GetHttpClient(_validateCertificates, DefaultHttpClientTimeoutMillis);
+                }
+                else
+                {
+                    _httpClient = HttpClientHelper.GetHttpClient(_httpHandler);
+                }
             }
 
-            return new HttpClient();
+            return _httpClient;
         }
 
         private void TrimKey(JsonWebKey key, byte[] existing)
         {
-            byte[] signRemoved = new byte[existing.Length - 1];
+            var signRemoved = new byte[existing.Length - 1];
             Buffer.BlockCopy(existing, 1, signRemoved, 0, existing.Length - 1);
-            string withSignRemoved = Base64UrlEncoder.Encode(signRemoved);
+            var withSignRemoved = Base64UrlEncoder.Encode(signRemoved);
             key.N = withSignRemoved;
         }
     }

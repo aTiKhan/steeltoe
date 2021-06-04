@@ -1,37 +1,32 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 
-namespace Steeltoe.Messaging.Rabbit.Config
+namespace Steeltoe.Messaging.RabbitMQ.Config
 {
     public interface IDeclarable
     {
         /// <summary>
-        /// Gets a value indicating whether this object should be declared
+        /// Gets or sets a value indicating whether this object should be declared
         /// </summary>
-        bool Declare { get; }
+        bool ShouldDeclare { get; set; }
 
         /// <summary>
-        /// Gets a collection of Admins that should declare this object
+        /// Gets or sets a collection of Admins that should declare this object
         /// </summary>
-        List<object> Admins { get; }
+        List<object> DeclaringAdmins { get; set; }
 
         /// <summary>
-        /// Gets a value indicating whether should ignore exceptions
+        /// Gets or sets a value indicating whether should ignore exceptions
         /// </summary>
-        public bool IgnoreDeclarationExceptions { get; }
+        public bool IgnoreDeclarationExceptions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the arguments for this declarable
+        /// </summary>
+        public Dictionary<string, object> Arguments { get; set; }
 
         /// <summary>
         /// Adds an argument to the declarable

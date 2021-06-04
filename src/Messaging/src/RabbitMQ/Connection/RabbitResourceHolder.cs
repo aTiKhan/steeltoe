@@ -1,36 +1,26 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using Steeltoe.Common.Transaction;
-using Steeltoe.Messaging.Rabbit.Exceptions;
+using Steeltoe.Messaging.RabbitMQ.Exceptions;
+using Steeltoe.Messaging.RabbitMQ.Support;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using R = RabbitMQ.Client;
+using RC = RabbitMQ.Client;
 
-namespace Steeltoe.Messaging.Rabbit.Connection
+namespace Steeltoe.Messaging.RabbitMQ.Connection
 {
     public class RabbitResourceHolder : ResourceHolderSupport
     {
         private readonly List<IConnection> _connections = new List<IConnection>();
 
-        private readonly List<R.IModel> _channels = new List<R.IModel>();
+        private readonly List<RC.IModel> _channels = new List<RC.IModel>();
 
-        private readonly Dictionary<IConnection, List<R.IModel>> _channelsPerConnection = new Dictionary<IConnection, List<R.IModel>>();
+        private readonly Dictionary<IConnection, List<RC.IModel>> _channelsPerConnection = new Dictionary<IConnection, List<RC.IModel>>();
 
-        private readonly Dictionary<R.IModel, List<ulong>> _deliveryTags = new Dictionary<R.IModel, List<ulong>>();
+        private readonly Dictionary<RC.IModel, List<ulong>> _deliveryTags = new Dictionary<RC.IModel, List<ulong>>();
 
         private readonly ILogger _logger;
 
@@ -40,7 +30,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             ReleaseAfterCompletion = true;
         }
 
-        public RabbitResourceHolder(R.IModel channel, bool releaseAfterCompletion, ILogger logger = null)
+        public RabbitResourceHolder(RC.IModel channel, bool releaseAfterCompletion, ILogger logger = null)
         {
             AddChannel(channel);
             ReleaseAfterCompletion = releaseAfterCompletion;
@@ -64,12 +54,12 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public void AddChannel(R.IModel channel)
+        public void AddChannel(RC.IModel channel)
         {
             AddChannel(channel, null);
         }
 
-        public void AddChannel(R.IModel channel, IConnection connection)
+        public void AddChannel(RC.IModel channel, IConnection connection)
         {
             if (channel == null)
             {
@@ -83,7 +73,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                 {
                     if (!_channelsPerConnection.TryGetValue(connection, out var channelsForConnection))
                     {
-                        channelsForConnection = new List<R.IModel>();
+                        channelsForConnection = new List<RC.IModel>();
                         _channelsPerConnection[connection] = channelsForConnection;
                     }
 
@@ -92,7 +82,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public bool ContainsChannel(R.IModel channel)
+        public bool ContainsChannel(RC.IModel channel)
         {
             return _channels.Contains(channel);
         }
@@ -102,7 +92,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             return _connections.Count > 0 ? _connections[0] : null;
         }
 
-        public R.IModel GetChannel()
+        public RC.IModel GetChannel()
         {
             return _channels.Count > 0 ? _channels[0] : null;
         }
@@ -126,8 +116,8 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
             catch (Exception e)
             {
-                _logger?.LogError("failed to commit RabbitMQ transaction", e);
-                throw new AmqpException("failed to commit RabbitMQ transaction", e);
+                _logger?.LogError(e, "failed to commit RabbitMQ transaction");
+                throw new RabbitException("failed to commit RabbitMQ transaction", e);
             }
         }
 
@@ -143,12 +133,12 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                     }
                     else
                     {
-                        _logger?.LogDebug("Skipping close of consumer channel: " + channel.ToString());
+                        _logger?.LogDebug("Skipping close of consumer channel: {channel} ", channel);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogDebug("Could not close synchronized Rabbit Channel after transaction", ex);
+                    _logger?.LogDebug(ex, "Could not close synchronized Rabbit Channel after transaction");
                 }
             }
 
@@ -162,11 +152,17 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             _channelsPerConnection.Clear();
         }
 
-        public void AddDeliveryTag(R.IModel channel, ulong deliveryTag)
+        public void AddDeliveryTag(RC.IModel channel, ulong deliveryTag)
         {
             if (_deliveryTags.TryGetValue(channel, out var tags))
             {
                 tags.Add(deliveryTag);
+            }
+            else
+            {
+                tags = new List<ulong>();
+                tags.Add(deliveryTag);
+                _deliveryTags.Add(channel, tags);
             }
         }
 
@@ -174,7 +170,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
         {
             foreach (var channel in _channels)
             {
-                _logger?.LogDebug("Rolling back messages to channel: " + channel);
+                _logger?.LogDebug("Rolling back messages to channel: {channel}", channel);
 
                 RabbitUtils.RollbackIfNecessary(channel);
                 if (_deliveryTags.TryGetValue(channel, out var tags))
@@ -185,10 +181,10 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                         {
                             channel.BasicReject(deliveryTag, RequeueOnRollback);
                         }
-                        catch (IOException ex)
+                        catch (Exception ex)
                         {
-                            _logger?.LogError("Error Rolling back messages to channel: " + channel, ex);
-                            throw new AmqpIOException(ex);
+                            _logger?.LogError(ex, "Error Rolling back messages to {channel} ", channel);
+                            throw RabbitExceptionTranslator.ConvertRabbitAccessException(ex);
                         }
                     }
 

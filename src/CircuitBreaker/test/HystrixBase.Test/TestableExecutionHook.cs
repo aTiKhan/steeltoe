@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Exceptions;
 using Steeltoe.CircuitBreaker.Hystrix.Strategy.ExecutionHook;
@@ -176,10 +166,10 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         private bool EventsMatch(List<Notification<object>> l, int numOnNext, int numOnError, int numOnCompleted)
         {
-            bool matchFailed = false;
-            int actualOnNext = 0;
-            int actualOnError = 0;
-            int actualOnCompleted = 0;
+            var matchFailed = false;
+            var actualOnNext = 0;
+            var actualOnError = 0;
+            var actualOnCompleted = 0;
 
             if (l.Count != numOnNext + numOnError + numOnCompleted)
             {
@@ -187,9 +177,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 return false;
             }
 
-            for (int n = 0; n < numOnNext; n++)
+            for (var n = 0; n < numOnNext; n++)
             {
-                Notification<object> current = l[n];
+                var current = l[n];
                 if (current.Kind != NotificationKind.OnNext)
                 {
                     matchFailed = true;
@@ -200,9 +190,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 }
             }
 
-            for (int e = numOnNext; e < numOnNext + numOnError; e++)
+            for (var e = numOnNext; e < numOnNext + numOnError; e++)
             {
-                Notification<object> current = l[e];
+                var current = l[e];
                 if (current.Kind != NotificationKind.OnError)
                 {
                     matchFailed = true;
@@ -213,9 +203,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 }
             }
 
-            for (int c = numOnNext + numOnError; c < numOnNext + numOnError + numOnCompleted; c++)
+            for (var c = numOnNext + numOnError; c < numOnNext + numOnError + numOnCompleted; c++)
             {
-                Notification<object> current = l[c];
+                var current = l[c];
                 if (current.Kind != NotificationKind.OnCompleted)
                 {
                     matchFailed = true;
@@ -237,7 +227,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         private Exception GetException(List<Notification<object>> l)
         {
-            foreach (Notification<object> n in l)
+            foreach (var n in l)
             {
                 if (n.Kind == NotificationKind.OnError)
                 {

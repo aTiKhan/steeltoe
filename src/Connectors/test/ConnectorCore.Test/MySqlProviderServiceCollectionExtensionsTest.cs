@@ -1,21 +1,10 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Steeltoe.Common.HealthChecks;
-using Steeltoe.Connector.Relational;
 using Steeltoe.Extensions.Configuration.CloudFoundry;
 using System;
 using System.Collections.Generic;
@@ -139,16 +128,9 @@ namespace Steeltoe.Connector.MySql.Test
             var service = services.BuildServiceProvider().GetService<IDbConnection>();
             Assert.NotNull(service);
             var connString = service.ConnectionString;
-
-            // NOTE: ignoring case here because the the property names are set to lower case by some package versions (MySql.Data 8+)
             Assert.Contains("Password=7E1LxXnlH2hhlPVt", connString, StringComparison.InvariantCultureIgnoreCase);
             Assert.Contains("Server=192.168.0.90;Port=3306", connString, StringComparison.InvariantCultureIgnoreCase);
             Assert.Contains("Database=cf_b4f8d2fa_a3ea_4e3a_a0e8_2cd040790355", connString, StringComparison.InvariantCultureIgnoreCase);
-
-            // When using MySqlConnector
-            // Assert.Contains("Username=Dd6O1BPXUHdrmzbP", connString);
-
-            // When using MySql.Data
             Assert.Contains("User Id=Dd6O1BPXUHdrmzbP", connString, StringComparison.InvariantCultureIgnoreCase);
         }
 
@@ -183,10 +165,7 @@ namespace Steeltoe.Connector.MySql.Test
             IServiceCollection services = new ServiceCollection();
             Environment.SetEnvironmentVariable("VCAP_APPLICATION", TestHelpers.VCAP_APPLICATION);
             Environment.SetEnvironmentVariable("VCAP_SERVICES", MySqlTestHelpers.SingleServerAzureVCAP);
-            var appsettings = new Dictionary<string, string>()
-            {
-                ["mysql:client:urlEncodedCredentials"] = "true"
-            };
+            var appsettings = new Dictionary<string, string>();
             var builder = new ConfigurationBuilder();
             builder.AddCloudFoundry();
             builder.AddInMemoryCollection(appsettings);
@@ -198,9 +177,9 @@ namespace Steeltoe.Connector.MySql.Test
             var service = services.BuildServiceProvider().GetService<IDbConnection>();
             Assert.NotNull(service);
             var connString = service.ConnectionString;
-            Assert.Contains("ub6oyk1kkh", connString);         // database
+            Assert.Contains("ub6oyk1kkh", connString);                                      // database
             Assert.Contains("3306", connString);                                            // port
-            Assert.Contains("451200b4-c29d-4346-9a0a-70bc109bb6e9.mysql.database.azure.com", connString);                                    // host
+            Assert.Contains("451200b4-c29d-4346-9a0a-70bc109bb6e9.mysql.database.azure.com", connString); // host
             Assert.Contains("wj7tsxai7i@451200b4-c29d-4346-9a0a-70bc109bb6e9", connString); // user
             Assert.Contains("10PUO82Uhqk8F2ii", connString);                                // password
         }
@@ -216,7 +195,7 @@ namespace Steeltoe.Connector.MySql.Test
 
             // Act
             MySqlProviderServiceCollectionExtensions.AddMySqlConnection(services, config);
-            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalHealthContributor;
+            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalDbHealthContributor;
 
             // Assert
             Assert.NotNull(healthContributor);
@@ -237,7 +216,7 @@ namespace Steeltoe.Connector.MySql.Test
 
             // Act
             MySqlProviderServiceCollectionExtensions.AddMySqlConnection(services, config);
-            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalHealthContributor;
+            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalDbHealthContributor;
 
             // Assert
             Assert.Null(healthContributor);
@@ -258,7 +237,7 @@ namespace Steeltoe.Connector.MySql.Test
 
             // Act
             MySqlProviderServiceCollectionExtensions.AddMySqlConnection(services, config, addSteeltoeHealthChecks: true);
-            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalHealthContributor;
+            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalDbHealthContributor;
 
             // Assert
             Assert.NotNull(healthContributor);

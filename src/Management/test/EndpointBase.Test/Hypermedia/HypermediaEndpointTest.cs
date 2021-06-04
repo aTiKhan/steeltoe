@@ -1,27 +1,28 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Steeltoe.Management.Endpoint.Info;
 using Steeltoe.Management.Endpoint.Test;
+using Steeltoe.Management.Endpoint.Test.Infrastructure;
 using System;
 using System.Collections.Generic;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Steeltoe.Management.Endpoint.Hypermedia.Test
 {
     public class HypermediaEndpointTest : BaseTest
     {
+        private readonly ITestOutputHelper _output;
+
+        public HypermediaEndpointTest(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
         [Fact]
         public void Constructor_ThrowsOptionsNull()
         {
@@ -31,73 +32,135 @@ namespace Steeltoe.Management.Endpoint.Hypermedia.Test
         [Fact]
         public void Invoke_ReturnsExpectedLinks()
         {
-            var mgmtOptions = new ActuatorManagementOptions();
-            var infoOpts = new InfoEndpointOptions();
-            var cloudOpts = new HypermediaEndpointOptions();
-            mgmtOptions.EndpointOptions.AddRange(new List<IEndpointOptions>() { infoOpts, cloudOpts });
+            using (var tc = new TestContext(_output))
+            {
+                tc.AdditionalServices = (services, configuration) =>
+                {
+                    services.AddHypermediaActuatorServices(configuration);
+                    services.AddInfoActuatorServices(configuration);
+                    services.AddSingleton(sp =>
+                    {
+                        var options = new ActuatorManagementOptions();
+                        options.EndpointOptions.Add(sp.GetRequiredService<IInfoOptions>());
+                        options.EndpointOptions.Add(sp.GetRequiredService<IActuatorHypermediaOptions>());
 
-            var ep = new ActuatorEndpoint(cloudOpts, new List<IManagementOptions>() { mgmtOptions });
+                        return options;
+                    });
+                };
 
-            var info = ep.Invoke("http://localhost:5000/foobar");
-            Assert.NotNull(info);
-            Assert.NotNull(info._links);
-            Assert.True(info._links.ContainsKey("self"));
-            Assert.Equal("http://localhost:5000/foobar", info._links["self"].href);
-            Assert.True(info._links.ContainsKey("info"));
-            Assert.Equal("http://localhost:5000/foobar/info", info._links["info"].href);
-            Assert.Equal(2, info._links.Count);
+                var ep = tc.GetService<IActuatorEndpoint>();
+
+                var info = ep.Invoke("http://localhost:5000/foobar");
+                Assert.NotNull(info);
+                Assert.NotNull(info._links);
+                Assert.True(info._links.ContainsKey("self"));
+                Assert.Equal("http://localhost:5000/foobar", info._links["self"].Href);
+                Assert.True(info._links.ContainsKey("info"));
+                Assert.Equal("http://localhost:5000/foobar/info", info._links["info"].Href);
+                Assert.Equal(2, info._links.Count);
+            }
         }
 
         [Fact]
         public void Invoke_OnlyActuatorHypermediaEndpoint_ReturnsExpectedLinks()
         {
-            var cloudOpts = new HypermediaEndpointOptions();
-            var mgmtOptions = new ActuatorManagementOptions();
-            mgmtOptions.EndpointOptions.Add(cloudOpts);
-            var ep = new ActuatorEndpoint(cloudOpts, new List<IManagementOptions> { mgmtOptions });
+            using (var tc = new TestContext(_output))
+            {
+                tc.AdditionalServices = (services, configuration) =>
+                {
+                    services.AddHypermediaActuatorServices(configuration);
+                    services.AddSingleton(sp =>
+                    {
+                        var options = new ActuatorManagementOptions();
+                        options.EndpointOptions.Add(sp.GetRequiredService<IActuatorHypermediaOptions>());
 
-            var info = ep.Invoke("http://localhost:5000/foobar");
-            Assert.NotNull(info);
-            Assert.NotNull(info._links);
-            Assert.True(info._links.ContainsKey("self"));
-            Assert.Equal("http://localhost:5000/foobar", info._links["self"].href);
-            Assert.Single(info._links);
+                        return options;
+                    });
+                };
+
+                var ep = tc.GetService<IActuatorEndpoint>();
+
+                var info = ep.Invoke("http://localhost:5000/foobar");
+                Assert.NotNull(info);
+                Assert.NotNull(info._links);
+                Assert.True(info._links.ContainsKey("self"));
+                Assert.Equal("http://localhost:5000/foobar", info._links["self"].Href);
+                Assert.Single(info._links);
+            }
         }
 
         [Fact]
         public void Invoke_HonorsEndpointEnabled_ReturnsExpectedLinks()
         {
-            var infoOpts = new InfoEndpointOptions { Enabled = false };
-            var cloudOpts = new HypermediaEndpointOptions();
-            var mgmtOptions = new ActuatorManagementOptions();
+            using (var tc = new TestContext(_output))
+            {
+                tc.AdditionalServices = (services, configuration) =>
+                {
+                    services.AddHypermediaActuatorServices(configuration);
+                    services.AddInfoActuatorServices(configuration);
+                    services.AddSingleton(sp =>
+                    {
+                        var options = new ActuatorManagementOptions();
+                        options.EndpointOptions.Add(sp.GetRequiredService<IInfoOptions>());
+                        options.EndpointOptions.Add(sp.GetRequiredService<IActuatorHypermediaOptions>());
 
-            mgmtOptions.EndpointOptions.AddRange(new List<IEndpointOptions>() { infoOpts, cloudOpts });
+                        return options;
+                    });
+                };
+                tc.AdditionalConfiguration = configuration =>
+                {
+                    configuration.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        { "management:endpoints:info:enabled", "false" }
+                    });
+                };
 
-            var ep = new ActuatorEndpoint(cloudOpts, new List<IManagementOptions> { mgmtOptions });
+                var ep = tc.GetService<IActuatorEndpoint>();
 
-            var info = ep.Invoke("http://localhost:5000/foobar");
-            Assert.NotNull(info);
-            Assert.NotNull(info._links);
-            Assert.True(info._links.ContainsKey("self"));
-            Assert.Equal("http://localhost:5000/foobar", info._links["self"].href);
-            Assert.False(info._links.ContainsKey("info"));
-            Assert.Single(info._links);
+                var info = ep.Invoke("http://localhost:5000/foobar");
+                Assert.NotNull(info);
+                Assert.NotNull(info._links);
+                Assert.True(info._links.ContainsKey("self"));
+                Assert.Equal("http://localhost:5000/foobar", info._links["self"].Href);
+                Assert.False(info._links.ContainsKey("info"));
+                Assert.Single(info._links);
+            }
         }
 
         [Fact]
         public void Invoke_CloudFoundryDisable_ReturnsExpectedLinks()
         {
-            var infoOpts = new InfoEndpointOptions { Enabled = true };
-            var cloudOpts = new HypermediaEndpointOptions { Enabled = false };
-            var mgmtOptions = new ActuatorManagementOptions();
+            using (var tc = new TestContext(_output))
+            {
+                tc.AdditionalServices = (services, configuration) =>
+                {
+                    services.AddHypermediaActuatorServices(configuration);
+                    services.AddInfoActuatorServices(configuration);
+                    services.AddSingleton(sp =>
+                    {
+                        var options = new ActuatorManagementOptions();
+                        options.EndpointOptions.Add(sp.GetRequiredService<IInfoOptions>());
+                        options.EndpointOptions.Add(sp.GetRequiredService<IActuatorHypermediaOptions>());
 
-            mgmtOptions.EndpointOptions.AddRange(new List<IEndpointOptions>() { infoOpts, cloudOpts });
+                        return options;
+                    });
+                };
+                tc.AdditionalConfiguration = configuration =>
+                {
+                    configuration.AddInMemoryCollection(new Dictionary<string, string>
+                    {
+                        { "management:endpoints:actuator:enabled", "false" },
+                        { "management:endpoints:info:enabled", "true" }
+                    });
+                };
 
-            var ep = new ActuatorEndpoint(cloudOpts, new List<IManagementOptions> { mgmtOptions });
-            var info = ep.Invoke("http://localhost:5000/foobar");
-            Assert.NotNull(info);
-            Assert.NotNull(info._links);
-            Assert.Empty(info._links);
+                var ep = tc.GetService<IActuatorEndpoint>();
+
+                var info = ep.Invoke("http://localhost:5000/foobar");
+                Assert.NotNull(info);
+                Assert.NotNull(info._links);
+                Assert.Empty(info._links);
+            }
         }
     }
 }

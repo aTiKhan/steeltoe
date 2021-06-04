@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Test;
 using Steeltoe.Common.Util;
@@ -24,7 +14,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Metrics.Test
 {
     public class HystrixMetricsPublisherFactoryTest : HystrixTestBase
     {
-        private ITestOutputHelper output;
+        private readonly ITestOutputHelper output;
 
         public HystrixMetricsPublisherFactoryTest(ITestOutputHelper output)
             : base()
@@ -35,11 +25,11 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Metrics.Test
         [Fact]
         public void TestSingleInitializePerKey()
         {
-            TestHystrixMetricsPublisher publisher = new TestHystrixMetricsPublisher();
+            var publisher = new TestHystrixMetricsPublisher();
             HystrixPlugins.RegisterMetricsPublisher(publisher);
-            HystrixMetricsPublisherFactory factory = new HystrixMetricsPublisherFactory();
-            List<Task> threads = new List<Task>();
-            for (int i = 0; i < 20; i++)
+            var factory = new HystrixMetricsPublisherFactory();
+            var threads = new List<Task>();
+            for (var i = 0; i < 20; i++)
             {
                 threads.Add(new Task(
                     () =>
@@ -53,7 +43,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Metrics.Test
             }
 
             // start them
-            foreach (Task t in threads)
+            foreach (var t in threads)
             {
                 t.Start();
             }
@@ -75,13 +65,13 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Metrics.Test
             // precondition: HystrixMetricsPublisherFactory class is not loaded. Calling HystrixPlugins.reset() here should be good enough to run this with other tests.
 
             // set first custom publisher
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("key");
+            var key = HystrixCommandKeyDefault.AsKey("key");
             IHystrixMetricsPublisherCommand firstCommand = new HystrixMetricsPublisherCommandDefault(key, null, null, null, null);
             HystrixMetricsPublisher firstPublisher = new CustomPublisher(firstCommand);
             HystrixPlugins.RegisterMetricsPublisher(firstPublisher);
 
             // ensure that first custom publisher is used
-            IHystrixMetricsPublisherCommand cmd = HystrixMetricsPublisherFactory.CreateOrRetrievePublisherForCommand(key, null, null, null, null);
+            var cmd = HystrixMetricsPublisherFactory.CreateOrRetrievePublisherForCommand(key, null, null, null, null);
             Assert.True(firstCommand == cmd);
 
             // reset, then change to second custom publisher
@@ -98,7 +88,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Metrics.Test
 
         private class MyHystrixMetricsPublisherCommand : IHystrixMetricsPublisherCommand
         {
-            private AtomicInteger commandCounter;
+            private readonly AtomicInteger commandCounter;
 
             public MyHystrixMetricsPublisherCommand(AtomicInteger commandCounter)
             {
@@ -113,7 +103,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Metrics.Test
 
         private class MyHystrixMetricsPublisherThreadPool : IHystrixMetricsPublisherThreadPool
         {
-            private AtomicInteger threadCounter;
+            private readonly AtomicInteger threadCounter;
 
             public MyHystrixMetricsPublisherThreadPool(AtomicInteger threadCounter)
             {
@@ -166,7 +156,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Metrics.Test
 
         private class CustomPublisher : HystrixMetricsPublisher
         {
-            private IHystrixMetricsPublisherCommand commandToReturn;
+            private readonly IHystrixMetricsPublisherCommand commandToReturn;
 
             public CustomPublisher(IHystrixMetricsPublisherCommand commandToReturn)
             {

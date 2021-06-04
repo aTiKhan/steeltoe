@@ -1,32 +1,17 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Sample
 {
     public class HystrixThreadPoolUtilization
     {
-        private readonly int currentActiveCount;
-        private readonly int currentCorePoolSize;
-        private readonly int currentPoolSize;
-        private readonly int currentQueueSize;
-
         public HystrixThreadPoolUtilization(int currentActiveCount, int currentCorePoolSize, int currentPoolSize, int currentQueueSize)
         {
-            this.currentActiveCount = currentActiveCount;
-            this.currentCorePoolSize = currentCorePoolSize;
-            this.currentPoolSize = currentPoolSize;
-            this.currentQueueSize = currentQueueSize;
+            CurrentActiveCount = currentActiveCount;
+            CurrentCorePoolSize = currentCorePoolSize;
+            CurrentPoolSize = currentPoolSize;
+            CurrentQueueSize = currentQueueSize;
         }
 
         public static HystrixThreadPoolUtilization Sample(HystrixThreadPoolMetrics threadPoolMetrics)
@@ -38,24 +23,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Sample
                     threadPoolMetrics.CurrentQueueSize);
         }
 
-        public int CurrentActiveCount
-        {
-            get { return currentActiveCount; }
-        }
+        public int CurrentActiveCount { get; }
 
-        public int CurrentCorePoolSize
-        {
-            get { return currentCorePoolSize; }
-        }
+        public int CurrentCorePoolSize { get; }
 
-        public int CurrentPoolSize
-        {
-            get { return currentPoolSize; }
-        }
+        public int CurrentPoolSize { get; }
 
-        public int CurrentQueueSize
-        {
-            get { return currentQueueSize; }
-        }
+        public int CurrentQueueSize { get; }
     }
 }

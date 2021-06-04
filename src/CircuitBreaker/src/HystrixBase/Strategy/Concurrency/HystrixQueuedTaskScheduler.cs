@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Exceptions;
 using System;
@@ -44,7 +34,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency
                 throw new ArgumentOutOfRangeException("queueSizeRejectionThreshold");
             }
 
-            this.workQueue = new BlockingCollection<Task>(queueSize);
+            workQueue = new BlockingCollection<Task>(queueSize);
 
             StartThreadPoolWorker();
             runningThreads = 1;
@@ -61,7 +51,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency
 
         public override bool IsQueueSpaceAvailable
         {
-            get { return workQueue.Count < queueSizeRejectionThreshold;  }
+            get { return workQueue.Count < queueSizeRejectionThreshold; }
         }
 
         #endregion IHystrixTaskScheduler
@@ -73,7 +63,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency
 
         protected override void QueueTask(Task task)
         {
-            bool isCommand = task.AsyncState is IHystrixInvokable;
+            var isCommand = task.AsyncState is IHystrixInvokable;
             if (!isCommand)
             {
                 RunContinuation(task);
@@ -124,15 +114,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency
 #pragma warning restore S2696 // Instance members should not write to "static" fields
                 try
                 {
-                    while (!this.shutdown)
+                    while (!shutdown)
                     {
-                        workQueue.TryTake(out Task item, 250);
+                        workQueue.TryTake(out var item, 250);
 
                         if (item != null)
                         {
                             try
                             {
-                                Interlocked.Increment(ref this.runningTasks);
+                                Interlocked.Increment(ref runningTasks);
                                 TryExecuteTask(item);
                             }
                             catch (Exception)
@@ -141,7 +131,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency
                             }
                             finally
                             {
-                                Interlocked.Decrement(ref this.runningTasks);
+                                Interlocked.Decrement(ref runningTasks);
                                 Interlocked.Increment(ref completedTasks);
                             }
                         }
@@ -169,7 +159,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency
 
             try
             {
-                Interlocked.Increment(ref this.runningTasks);
+                Interlocked.Increment(ref runningTasks);
                 return TryExecuteTask(task);
             }
             catch (Exception)
@@ -178,7 +168,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency
             }
             finally
             {
-                Interlocked.Decrement(ref this.runningTasks);
+                Interlocked.Decrement(ref runningTasks);
                 Interlocked.Increment(ref completedTasks);
             }
 

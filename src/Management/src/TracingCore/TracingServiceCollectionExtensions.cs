@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,31 +19,31 @@ namespace Steeltoe.Management.Tracing
 {
     public static class TracingServiceCollectionExtensions
     {
-        public static void AddDistributedTracing(this IServiceCollection services, IConfiguration config, Action<TracerBuilder> configureTracer = null)
+        public static void AddDistributedTracing(this IServiceCollection services, IConfiguration config = null, Action<TracerBuilder> configureTracer = null)
         {
             if (services == null)
             {
                 throw new ArgumentNullException(nameof(services));
             }
 
-            if (config == null)
+            if ((config ?? services.BuildServiceProvider().GetService<IConfiguration>()) == null)
             {
                 throw new ArgumentNullException(nameof(config));
             }
 
-            var appInstanceInfo = services.BuildServiceProvider().GetService<IApplicationInstanceInfo>();
+            var appInstanceInfo = services.GetApplicationInstanceInfo();
 
             services.TryAddSingleton<IDiagnosticsManager, DiagnosticsManager>();
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, TracingService>());
 
-            services.TryAddSingleton<ITracingOptions>((p) =>
+            services.TryAddSingleton<ITracingOptions>((serviceProvider) =>
             {
-                return new TracingOptions(appInstanceInfo, config);
+                return new TracingOptions(appInstanceInfo, config ?? serviceProvider.GetRequiredService<IConfiguration>());
             });
 
-            services.TryAddSingleton<ITraceExporterOptions>((p) =>
+            services.TryAddSingleton<ITraceExporterOptions>((serviceProvider) =>
             {
-                return new TraceExporterOptions(appInstanceInfo, config);
+                return new TraceExporterOptions(appInstanceInfo, config ?? serviceProvider.GetRequiredService<IConfiguration>());
             });
 
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IDiagnosticObserver, AspNetCoreHostingObserver>());

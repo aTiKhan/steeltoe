@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.Common.Reflection;
 using System;
@@ -25,18 +15,29 @@ namespace Steeltoe.Connector.EFCore
         /// <summary>
         /// Gets a list of supported MySQL Entity Framework Core Assemblies
         /// </summary>
-        public static string[] MySqlEntityAssemblies { get; internal set; } = new string[] { "MySql.Data.EntityFrameworkCore", "Pomelo.EntityFrameworkCore.MySql" };
+        public static string[] MySqlEntityAssemblies { get; internal set; } = new string[] { "MySql.EntityFrameworkCore", "MySql.Data.EntityFrameworkCore", "Pomelo.EntityFrameworkCore.MySql" };
 
         /// <summary>
         /// Gets a list of supported fully-qualifed names for compatible DbContextOptionsExtentions used to configure EntityFrameworkCore
         /// </summary>
-        public static string[] MySqlEntityTypeNames { get; internal set; } = new string[] { "MySQL.Data.EntityFrameworkCore.Extensions.MySQLDbContextOptionsExtensions", "Microsoft.EntityFrameworkCore.MySqlDbContextOptionsExtensions", "Microsoft.EntityFrameworkCore.MySQLDbContextOptionsExtensions" };
+        public static string[] MySqlEntityTypeNames { get; internal set; } = new string[]
+            {
+                "MySQL.Data.EntityFrameworkCore.Extensions.MySQLDbContextOptionsExtensions",
+                "Microsoft.EntityFrameworkCore.MySqlDbContextOptionsExtensions",
+                "Microsoft.EntityFrameworkCore.MySQLDbContextOptionsExtensions",
+                "Microsoft.EntityFrameworkCore.MySqlDbContextOptionsBuilderExtensions"
+            };
 
         /// <summary>
-        /// Gets the type used to configure EntityFramework Core with MySql
+        /// Gets the type used to configure EntityFramework Core with MySQL
         /// </summary>
         /// <exception cref="ConnectorException">When type is not found</exception>
         public static Type MySqlDbContextOptionsType => ReflectionHelpers.FindTypeOrThrow(MySqlEntityAssemblies, MySqlEntityTypeNames, "DbContextOptionsBuilder", "a MySql EntityFramework Core assembly");
+
+        /// <summary>
+        /// Gets the ServerVersion base type used to identify MySQL Server versions (introduced in v5.0)
+        /// </summary>
+        public static Type MySqlVersionType => ReflectionHelpers.FindType(new[] { "Pomelo.EntityFrameworkCore.MySql" }, new[] { "Microsoft.EntityFrameworkCore.ServerVersion" });
 
         /// <summary>
         /// Gets a list of supported PostgreSQL Entity Framework Core Assemblies
@@ -46,7 +47,7 @@ namespace Steeltoe.Connector.EFCore
         /// <summary>
         /// Gets a list of supported fully-qualifed names for compatible DbContextOptionsExtentions used to configure EntityFrameworkCore
         /// </summary>
-        public static string[] PostgreSqlEntityTypeNames { get; internal set; } = new string[] { "Microsoft.EntityFrameworkCore.NpgsqlDbContextOptionsExtensions" };
+        public static string[] PostgreSqlEntityTypeNames { get; internal set; } = new string[] { "Microsoft.EntityFrameworkCore.NpgsqlDbContextOptionsExtensions", "Microsoft.EntityFrameworkCore.NpgsqlDbContextOptionsBuilderExtensions" };
 
         /// <summary>
         /// Gets the type used to configure EntityFramework Core with PostgreSQL

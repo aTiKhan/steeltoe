@@ -1,51 +1,43 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
+
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
-using Steeltoe.Messaging.Rabbit.Core;
-using Steeltoe.Messaging.Rabbit.Data;
-using Steeltoe.Messaging.Rabbit.Support;
+using Steeltoe.Common.Util;
+using Steeltoe.Messaging.RabbitMQ.Core;
+using Steeltoe.Messaging.RabbitMQ.Support;
+using Steeltoe.Messaging.Support;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using static Steeltoe.Messaging.Rabbit.Connection.CorrelationData;
-using static Steeltoe.Messaging.Rabbit.Connection.IPublisherCallbackChannel;
+using static Steeltoe.Messaging.RabbitMQ.Connection.CorrelationData;
+using static Steeltoe.Messaging.RabbitMQ.Connection.IPublisherCallbackChannel;
+using RC=RabbitMQ.Client;
 
-namespace Steeltoe.Messaging.Rabbit.Connection
+namespace Steeltoe.Messaging.RabbitMQ.Connection
 {
 #pragma warning disable S3881 // "IDisposable" should be implemented correctly
     public class PublisherCallbackChannel : IPublisherCallbackChannel
-#pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
         public const string RETURNED_MESSAGE_CORRELATION_KEY = "spring_returned_message_correlation";
         public const string RETURN_LISTENER_CORRELATION_KEY = "spring_listener_return_correlation";
+        public const string RETURN_LISTENER_ERROR = "No '" + RETURN_LISTENER_CORRELATION_KEY + "' header in returned message";
         private readonly List<PendingConfirm> _emptyConfirms = new List<PendingConfirm>();
-        private readonly IMessagePropertiesConverter _converter = new DefaultMessagePropertiesConverter();
+        private readonly IMessageHeadersConverter _converter = new DefaultMessageHeadersConverter();
         private readonly ILogger _logger;
         private readonly object _lock = new object();
         private readonly ConcurrentDictionary<IListener, SortedDictionary<ulong, PendingConfirm>> _pendingConfirms = new ConcurrentDictionary<IListener, SortedDictionary<ulong, PendingConfirm>>();
         private readonly ConcurrentDictionary<string, IListener> _listeners = new ConcurrentDictionary<string, IListener>();
         private readonly SortedDictionary<ulong, IListener> _listenerForSeq = new SortedDictionary<ulong, IListener>();
         private readonly ConcurrentDictionary<string, PendingConfirm> _pendingReturns = new ConcurrentDictionary<string, PendingConfirm>();
-        private Action<IModel> _afterAckCallback;
+        private Action<RC.IModel> _afterAckCallback;
 
-        public PublisherCallbackChannel(IModel channel, ILogger logger = null)
+        public PublisherCallbackChannel(RC.IModel channel, ILogger logger = null)
         {
             Channel = channel;
             _logger = logger;
@@ -54,9 +46,9 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
         #region IPublisherCallbackChannel
 
-        public IModel Channel { get; }
+        public virtual RC.IModel Channel { get; }
 
-        public IList<PendingConfirm> Expire(IPublisherCallbackChannel.IListener listener, long cutoffTime)
+        public virtual IList<PendingConfirm> Expire(IPublisherCallbackChannel.IListener listener, long cutoffTime)
         {
             lock (_lock)
             {
@@ -97,7 +89,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public int GetPendingConfirmsCount(IPublisherCallbackChannel.IListener listener)
+        public virtual int GetPendingConfirmsCount(IPublisherCallbackChannel.IListener listener)
         {
             lock (_lock)
             {
@@ -112,7 +104,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public int GetPendingConfirmsCount()
+        public virtual int GetPendingConfirmsCount()
         {
             lock (_lock)
             {
@@ -123,7 +115,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public void AddListener(IListener listener)
+        public virtual void AddListener(IListener listener)
         {
             if (listener == null)
             {
@@ -140,11 +132,11 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             if (_listeners.TryAdd(listener.UUID, listener))
             {
                 _pendingConfirms[listener] = new SortedDictionary<ulong, PendingConfirm>();
-                _logger?.LogDebug("Added listener " + listener);
+                _logger?.LogDebug("Added listener {listener}", listener);
             }
         }
 
-        public void AddPendingConfirm(IPublisherCallbackChannel.IListener listener, ulong sequence, PendingConfirm pendingConfirm)
+        public virtual void AddPendingConfirm(IPublisherCallbackChannel.IListener listener, ulong sequence, PendingConfirm pendingConfirm)
         {
             lock (_lock)
             {
@@ -166,7 +158,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public void SetAfterAckCallback(Action<IModel> callback)
+        public virtual void SetAfterAckCallback(Action<RC.IModel> callback)
         {
             if (GetPendingConfirmsCount() == 0 && callback != null)
             {
@@ -181,21 +173,21 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
         #region IModel
 
-        public int ChannelNumber => Channel.ChannelNumber;
+        public virtual int ChannelNumber => Channel.ChannelNumber;
 
-        public ShutdownEventArgs CloseReason => Channel.CloseReason;
+        public virtual RC.ShutdownEventArgs CloseReason => Channel.CloseReason;
 
-        public IBasicConsumer DefaultConsumer { get => Channel.DefaultConsumer; set => Channel.DefaultConsumer = value; }
+        public virtual RC.IBasicConsumer DefaultConsumer { get => Channel.DefaultConsumer; set => Channel.DefaultConsumer = value; }
 
-        public bool IsClosed => Channel.IsClosed;
+        public virtual bool IsClosed => Channel.IsClosed;
 
-        public bool IsOpen => Channel.IsOpen;
+        public virtual bool IsOpen => Channel.IsOpen;
 
-        public ulong NextPublishSeqNo => Channel.NextPublishSeqNo;
+        public virtual ulong NextPublishSeqNo => Channel.NextPublishSeqNo;
 
-        public TimeSpan ContinuationTimeout { get => Channel.ContinuationTimeout; set => Channel.ContinuationTimeout = value; }
+        public virtual TimeSpan ContinuationTimeout { get => Channel.ContinuationTimeout; set => Channel.ContinuationTimeout = value; }
 
-        public event EventHandler<BasicAckEventArgs> BasicAcks
+        public virtual event EventHandler<BasicAckEventArgs> BasicAcks
         {
             add
             {
@@ -208,7 +200,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public event EventHandler<BasicNackEventArgs> BasicNacks
+        public virtual event EventHandler<BasicNackEventArgs> BasicNacks
         {
             add
             {
@@ -221,7 +213,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public event EventHandler<EventArgs> BasicRecoverOk
+        public virtual event EventHandler<EventArgs> BasicRecoverOk
         {
             add
             {
@@ -234,7 +226,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public event EventHandler<BasicReturnEventArgs> BasicReturn
+        public virtual event EventHandler<BasicReturnEventArgs> BasicReturn
         {
             add
             {
@@ -247,7 +239,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public event EventHandler<CallbackExceptionEventArgs> CallbackException
+        public virtual event EventHandler<CallbackExceptionEventArgs> CallbackException
         {
             add
             {
@@ -260,7 +252,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public event EventHandler<FlowControlEventArgs> FlowControl
+        public virtual event EventHandler<FlowControlEventArgs> FlowControl
         {
             add
             {
@@ -273,7 +265,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public event EventHandler<ShutdownEventArgs> ModelShutdown
+        public virtual event EventHandler<RC.ShutdownEventArgs> ModelShutdown
         {
             add
             {
@@ -286,128 +278,124 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
 
-        public void Abort() => Channel.Abort();
+        public virtual void Abort() => Channel.Abort();
 
-        public void Abort(ushort replyCode, string replyText) => Channel.Abort(replyCode, replyText);
+        public virtual void Abort(ushort replyCode, string replyText) => Channel.Abort(replyCode, replyText);
 
-        public void BasicAck(ulong deliveryTag, bool multiple) => Channel.BasicAck(deliveryTag, multiple);
+        public virtual void BasicAck(ulong deliveryTag, bool multiple) => Channel.BasicAck(deliveryTag, multiple);
 
-        public void BasicCancel(string consumerTag) => Channel.BasicCancel(consumerTag);
+        public virtual void BasicCancel(string consumerTag) => Channel.BasicCancel(consumerTag);
 
-        public string BasicConsume(string queue, bool autoAck, string consumerTag, bool noLocal, bool exclusive, IDictionary<string, object> arguments, IBasicConsumer consumer)
+        public virtual string BasicConsume(string queue, bool autoAck, string consumerTag, bool noLocal, bool exclusive, IDictionary<string, object> arguments, RC.IBasicConsumer consumer)
             => Channel.BasicConsume(queue, autoAck, consumerTag, noLocal, exclusive, arguments, consumer);
 
-        public BasicGetResult BasicGet(string queue, bool autoAck) => Channel.BasicGet(queue, autoAck);
+        public virtual RC.BasicGetResult BasicGet(string queue, bool autoAck) => Channel.BasicGet(queue, autoAck);
 
-        public void BasicNack(ulong deliveryTag, bool multiple, bool requeue) => Channel.BasicNack(deliveryTag, multiple, requeue);
+        public virtual void BasicNack(ulong deliveryTag, bool multiple, bool requeue) => Channel.BasicNack(deliveryTag, multiple, requeue);
 
-        public void BasicPublish(string exchange, string routingKey, bool mandatory, IBasicProperties basicProperties, byte[] body)
+        public virtual void BasicPublish(string exchange, string routingKey, bool mandatory, RC.IBasicProperties basicProperties, byte[] body)
             => Channel.BasicPublish(exchange, routingKey, mandatory, basicProperties, body);
 
-        public void BasicQos(uint prefetchSize, ushort prefetchCount, bool global) => Channel.BasicQos(prefetchSize, prefetchCount, global);
+        public virtual void BasicQos(uint prefetchSize, ushort prefetchCount, bool global) => Channel.BasicQos(prefetchSize, prefetchCount, global);
 
-        public void BasicRecover(bool requeue) => Channel.BasicRecover(requeue);
+        public virtual void BasicRecover(bool requeue) => Channel.BasicRecover(requeue);
 
-        public void BasicRecoverAsync(bool requeue) => Channel.BasicRecoverAsync(requeue);
+        public virtual void BasicRecoverAsync(bool requeue) => Channel.BasicRecoverAsync(requeue);
 
-        public void BasicReject(ulong deliveryTag, bool requeue) => Channel.BasicReject(deliveryTag, requeue);
+        public virtual void BasicReject(ulong deliveryTag, bool requeue) => Channel.BasicReject(deliveryTag, requeue);
 
-        public void Close()
+        public virtual void Close()
         {
-            _logger?.LogDebug("Closing " + Channel);
+            _logger?.LogDebug("Closing channel {channel}", Channel);
             try
             {
                 Channel.Close();
             }
-            catch (AlreadyClosedException)
+            catch (AlreadyClosedException e)
             {
-                _logger?.LogTrace(Channel + " is already closed");
+                _logger?.LogTrace(e, "Channel {channel} is already closed", Channel);
             }
 
             ShutdownCompleted("Channel closed by application");
         }
 
-        public void Close(ushort replyCode, string replyText)
+        public virtual void Close(ushort replyCode, string replyText)
         {
             Channel.Close(replyCode, replyText);
-
-            // if (this.delegate instanceof AutorecoveringChannel) {
-            //    ClosingRecoveryListener.removeChannel((AutorecoveringChannel)this.delegate);
-            // }
         }
 
-        public void ConfirmSelect() => Channel.ConfirmSelect();
+        public virtual void ConfirmSelect() => Channel.ConfirmSelect();
 
-        public uint ConsumerCount(string queue) => Channel.ConsumerCount(queue);
+        public virtual uint ConsumerCount(string queue) => Channel.ConsumerCount(queue);
 
-        public IBasicProperties CreateBasicProperties() => Channel.CreateBasicProperties();
+        public virtual RC.IBasicProperties CreateBasicProperties() => Channel.CreateBasicProperties();
 
-        public IBasicPublishBatch CreateBasicPublishBatch() => Channel.CreateBasicPublishBatch();
+        public virtual RC.IBasicPublishBatch CreateBasicPublishBatch() => Channel.CreateBasicPublishBatch();
 
-        public void ExchangeBind(string destination, string source, string routingKey, IDictionary<string, object> arguments)
+        public virtual void ExchangeBind(string destination, string source, string routingKey, IDictionary<string, object> arguments)
             => Channel.ExchangeBind(destination, source, routingKey, arguments);
 
-        public void ExchangeBindNoWait(string destination, string source, string routingKey, IDictionary<string, object> arguments)
+        public virtual void ExchangeBindNoWait(string destination, string source, string routingKey, IDictionary<string, object> arguments)
             => Channel.ExchangeBindNoWait(destination, source, routingKey, arguments);
 
-        public void ExchangeDeclare(string exchange, string type, bool durable, bool autoDelete, IDictionary<string, object> arguments)
+        public virtual void ExchangeDeclare(string exchange, string type, bool durable, bool autoDelete, IDictionary<string, object> arguments)
             => Channel.ExchangeDeclare(exchange, type, durable, autoDelete, arguments);
 
-        public void ExchangeDeclareNoWait(string exchange, string type, bool durable, bool autoDelete, IDictionary<string, object> arguments)
+        public virtual void ExchangeDeclareNoWait(string exchange, string type, bool durable, bool autoDelete, IDictionary<string, object> arguments)
             => Channel.ExchangeDeclareNoWait(exchange, type, durable, autoDelete, arguments);
 
-        public void ExchangeDeclarePassive(string exchange) => Channel.ExchangeDeclarePassive(exchange);
+        public virtual void ExchangeDeclarePassive(string exchange) => Channel.ExchangeDeclarePassive(exchange);
 
-        public void ExchangeDelete(string exchange, bool ifUnused) => Channel.ExchangeDelete(exchange, ifUnused);
+        public virtual void ExchangeDelete(string exchange, bool ifUnused) => Channel.ExchangeDelete(exchange, ifUnused);
 
-        public void ExchangeDeleteNoWait(string exchange, bool ifUnused) => Channel.ExchangeDeleteNoWait(exchange, ifUnused);
+        public virtual void ExchangeDeleteNoWait(string exchange, bool ifUnused) => Channel.ExchangeDeleteNoWait(exchange, ifUnused);
 
-        public void ExchangeUnbind(string destination, string source, string routingKey, IDictionary<string, object> arguments)
+        public virtual void ExchangeUnbind(string destination, string source, string routingKey, IDictionary<string, object> arguments)
             => Channel.ExchangeUnbind(destination, source, routingKey, arguments);
 
-        public void ExchangeUnbindNoWait(string destination, string source, string routingKey, IDictionary<string, object> arguments)
+        public virtual void ExchangeUnbindNoWait(string destination, string source, string routingKey, IDictionary<string, object> arguments)
             => Channel.ExchangeUnbindNoWait(destination, source, routingKey, arguments);
 
-        public uint MessageCount(string queue) => Channel.MessageCount(queue);
+        public virtual uint MessageCount(string queue) => Channel.MessageCount(queue);
 
-        public void QueueBind(string queue, string exchange, string routingKey, IDictionary<string, object> arguments)
+        public virtual void QueueBind(string queue, string exchange, string routingKey, IDictionary<string, object> arguments)
             => Channel.QueueBind(queue, exchange, routingKey, arguments);
 
-        public void QueueBindNoWait(string queue, string exchange, string routingKey, IDictionary<string, object> arguments)
+        public virtual void QueueBindNoWait(string queue, string exchange, string routingKey, IDictionary<string, object> arguments)
             => Channel.QueueBindNoWait(queue, exchange, routingKey, arguments);
 
-        public QueueDeclareOk QueueDeclare(string queue, bool durable, bool exclusive, bool autoDelete, IDictionary<string, object> arguments)
+        public virtual RC.QueueDeclareOk QueueDeclare(string queue, bool durable, bool exclusive, bool autoDelete, IDictionary<string, object> arguments)
             => Channel.QueueDeclare(queue, durable, exclusive, autoDelete, arguments);
 
-        public void QueueDeclareNoWait(string queue, bool durable, bool exclusive, bool autoDelete, IDictionary<string, object> arguments)
+        public virtual void QueueDeclareNoWait(string queue, bool durable, bool exclusive, bool autoDelete, IDictionary<string, object> arguments)
             => Channel.QueueDeclareNoWait(queue, durable, exclusive, autoDelete, arguments);
 
-        public QueueDeclareOk QueueDeclarePassive(string queue) => Channel.QueueDeclarePassive(queue);
+        public virtual RC.QueueDeclareOk QueueDeclarePassive(string queue) => Channel.QueueDeclarePassive(queue);
 
-        public uint QueueDelete(string queue, bool ifUnused, bool ifEmpty) => Channel.QueueDelete(queue, ifUnused, ifEmpty);
+        public virtual uint QueueDelete(string queue, bool ifUnused, bool ifEmpty) => Channel.QueueDelete(queue, ifUnused, ifEmpty);
 
-        public void QueueDeleteNoWait(string queue, bool ifUnused, bool ifEmpty) => Channel.QueueDeleteNoWait(queue, ifUnused, ifEmpty);
+        public virtual void QueueDeleteNoWait(string queue, bool ifUnused, bool ifEmpty) => Channel.QueueDeleteNoWait(queue, ifUnused, ifEmpty);
 
-        public uint QueuePurge(string queue) => Channel.QueuePurge(queue);
+        public virtual uint QueuePurge(string queue) => Channel.QueuePurge(queue);
 
-        public void QueueUnbind(string queue, string exchange, string routingKey, IDictionary<string, object> arguments)
+        public virtual void QueueUnbind(string queue, string exchange, string routingKey, IDictionary<string, object> arguments)
             => Channel.QueueBind(queue, exchange, routingKey, arguments);
 
-        public void TxCommit() => Channel.TxCommit();
+        public virtual void TxCommit() => Channel.TxCommit();
 
-        public void TxRollback() => Channel.TxRollback();
+        public virtual void TxRollback() => Channel.TxRollback();
 
-        public void TxSelect() => Channel.TxSelect();
+        public virtual void TxSelect() => Channel.TxSelect();
 
-        public bool WaitForConfirms() => Channel.WaitForConfirms();
+        public virtual bool WaitForConfirms() => Channel.WaitForConfirms();
 
-        public bool WaitForConfirms(TimeSpan timeout) => Channel.WaitForConfirms(timeout);
+        public virtual bool WaitForConfirms(TimeSpan timeout) => Channel.WaitForConfirms(timeout);
 
-        public bool WaitForConfirms(TimeSpan timeout, out bool timedOut) => Channel.WaitForConfirms(timeout, out timedOut);
+        public virtual bool WaitForConfirms(TimeSpan timeout, out bool timedOut) => Channel.WaitForConfirms(timeout, out timedOut);
 
-        public void WaitForConfirmsOrDie() => Channel.WaitForConfirmsOrDie();
+        public virtual void WaitForConfirmsOrDie() => Channel.WaitForConfirmsOrDie();
 
-        public void WaitForConfirmsOrDie(TimeSpan timeout) => Channel.WaitForConfirmsOrDie(timeout);
+        public virtual void WaitForConfirmsOrDie(TimeSpan timeout) => Channel.WaitForConfirmsOrDie(timeout);
         #endregion
 
         #region IDisposable Support
@@ -418,7 +406,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
         #endregion
 
         #region Private
-        private void ShutdownCompleted(object sender, ShutdownEventArgs e)
+        private void ShutdownCompleted(object sender, RC.ShutdownEventArgs e)
         {
             ShutdownCompleted(e.ReplyText);
         }
@@ -438,7 +426,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                     foreach (var confirmEntry in entry.Value)
                     {
                         confirmEntry.Value.Cause = cause;
-                        _logger?.LogDebug(ToString() + " PC:Nack:(close):" + confirmEntry.Key);
+                        _logger?.LogDebug("{channel} PC:Nack:(close):{confirmEntry}", ToString(), confirmEntry.Key);
                         ProcessAck(confirmEntry.Key, false, false, false);
                     }
 
@@ -455,20 +443,13 @@ namespace Steeltoe.Messaging.Rabbit.Connection
         private void HandleReturn(object sender, BasicReturnEventArgs args)
         {
             var properties = args.BasicProperties;
-            if (properties.Headers.TryGetValue(RETURNED_MESSAGE_CORRELATION_KEY, out var returnCorrelation) && _pendingReturns.Remove(returnCorrelation.ToString(), out var confirm))
+            var messageProperties = _converter.ToMessageHeaders(properties, new Envelope(0, false, args.Exchange, args.RoutingKey), EncodingUtils.GetDefaultEncoding());
+            if (properties.Headers.TryGetValue(RETURNED_MESSAGE_CORRELATION_KEY, out var returnCorrelation) && _pendingReturns.Remove(returnCorrelation.ToString(), out var confirm) && confirm.CorrelationInfo != null)
             {
-                var messageProperties = _converter.ToMessageProperties(properties, new Envelope(0, false, args.Exchange, args.RoutingKey), System.Text.Encoding.UTF8);
-                if (confirm.CorrelationInfo != null)
-                {
-                    confirm.CorrelationInfo.ReturnedMessage = new Message(args.Body, messageProperties);
-                }
+                confirm.CorrelationInfo.ReturnedMessage = Message.Create(args.Body, messageProperties);
             }
 
-            string uuidObject = null;
-            if (properties.Headers.TryGetValue(RETURN_LISTENER_CORRELATION_KEY, out var returnListenerHeader))
-            {
-                uuidObject = returnListenerHeader.ToString();
-            }
+            var uuidObject = messageProperties.Get<string>(RETURN_LISTENER_CORRELATION_KEY);
 
             IListener listener = null;
             if (uuidObject != null)
@@ -477,7 +458,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
             else
             {
-                _logger?.LogError("No '" + RETURN_LISTENER_CORRELATION_KEY + "' header in returned message");
+                _logger?.LogError(RETURN_LISTENER_ERROR);
             }
 
             if (listener == null || !listener.IsReturnListener)
@@ -489,37 +470,33 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                 // _hasReturned = true;
                 var listenerToInvoke = listener;
 
-                // TODO: Not sure this needs its own thread .. probably does .. but need to explore Rabbit client threading model
-                Task.Run(() =>
+                try
                 {
-                    try
-                    {
-                        listenerToInvoke.HandleReturn(args.ReplyCode, args.ReplyText, args.Exchange, args.RoutingKey, properties, args.Body);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger?.LogError("Exception delivering returned message ", e);
-                    }
-                    finally
-                    {
-                        // TODO: Not sure this latch is needed ..
-                        // I think its is to ensure the callback for return and confirm are not done at same time?
-                        // Returns should happen first and then confirms
-                        // _returnLatch.countDown();
-                    }
-                });
+                    listenerToInvoke.HandleReturn(args.ReplyCode, args.ReplyText, args.Exchange, args.RoutingKey, properties, args.Body);
+                }
+                catch (Exception e)
+                {
+                    _logger?.LogError(e, "Exception delivering returned message ");
+                }
+                finally
+                {
+                    // TODO: Not sure this latch is needed ..
+                    // I think its is to ensure the callback for return and confirm are not done at same time?
+                    // Returns should happen first and then confirms
+                    // _returnLatch.countDown();
+                }
             }
         }
 
         private void HandleAck(object sender, BasicAckEventArgs args)
         {
-            _logger?.LogDebug(ToString() + " PC:Ack:" + args.DeliveryTag + ":" + args.Multiple);
+            _logger?.LogDebug("{channel} PC:Ack: {deliveryTag}:{multiple}", this.ToString(), args.DeliveryTag, args.Multiple);
             ProcessAck(args.DeliveryTag, true, args.Multiple, true);
         }
 
         private void HandleNack(object sender, BasicNackEventArgs args)
         {
-            _logger?.LogDebug(ToString() + " PC:Nack:" + args.DeliveryTag + ":" + args.Multiple);
+            _logger?.LogDebug("{channel} PC:Nack: {deliveryTag}:{multiple}", this.ToString(), args.DeliveryTag, args.Multiple);
             ProcessAck(args.DeliveryTag, false, args.Multiple, true);
         }
 
@@ -533,7 +510,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                 }
                 catch (Exception e)
                 {
-                    _logger?.LogError("Failed to process publisher confirm", e);
+                    _logger?.LogError(e, "Failed to process publisher confirm");
                 }
             }
         }
@@ -578,7 +555,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                 }
                 else
                 {
-                    _logger?.LogDebug(Channel.ToString() + " No listener for seq:" + seq);
+                    _logger?.LogDebug("{channel} No listener for seq: {seq}", Channel, seq);
                 }
             }
         }
@@ -648,13 +625,13 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                         //    this.logger
                         //            .error("Return callback failed to execute in " + RETURN_CALLBACK_TIMEOUT + " seconds");
                         // }
-                        _logger?.LogDebug("Sending confirm " + pendingConfirm);
+                        _logger?.LogDebug("Sending confirm {confirm} ", pendingConfirm);
                         listener.HandleConfirm(pendingConfirm, ack);
                     }
                 }
                 catch (Exception e)
                 {
-                    _logger?.LogError("Exception delivering confirm", e);
+                    _logger?.LogError(e, "Exception delivering confirm");
                 }
                 finally
                 {
@@ -668,7 +645,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                     }
                     catch (Exception e)
                     {
-                        _logger?.LogError("Failed to invoke afterAckCallback", e);
+                        _logger?.LogError(e, "Failed to invoke afterAckCallback");
                     }
                 }
             });
@@ -676,4 +653,5 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
         #endregion
     }
+#pragma warning restore S3881 // "IDisposable" should be implemented correctly
 }

@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Util;
 using Steeltoe.Common.Util;
@@ -23,10 +13,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
 {
     public class HystrixConfigurationStream
     {
-        private static int dataEmissionIntervalInMs = 5000;
-        private readonly int intervalInMilliseconds;
-        private readonly IObservable<HystrixConfiguration> allConfigurationStream;
-        private readonly AtomicBoolean isSourceCurrentlySubscribed = new AtomicBoolean(false);
+        private static readonly int DataEmissionIntervalInMs = 5000;
+        private readonly IObservable<HystrixConfiguration> _allConfigurationStream;
+        private readonly AtomicBoolean _isSourceCurrentlySubscribed = new AtomicBoolean(false);
 
         private static Func<long, HystrixConfiguration> AllConfig { get; } =
             (long timestamp) =>
@@ -39,58 +28,55 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
 
         public HystrixConfigurationStream(int intervalInMilliseconds)
         {
-            this.intervalInMilliseconds = intervalInMilliseconds;
-            this.allConfigurationStream = Observable.Interval(TimeSpan.FromMilliseconds(intervalInMilliseconds))
+            IntervalInMilliseconds = intervalInMilliseconds;
+            _allConfigurationStream = Observable.Interval(TimeSpan.FromMilliseconds(intervalInMilliseconds))
                     .Map(AllConfig)
                     .OnSubscribe(() =>
                 {
-                    isSourceCurrentlySubscribed.Value = true;
+                    _isSourceCurrentlySubscribed.Value = true;
                 })
                     .OnDispose(() =>
                 {
-                    isSourceCurrentlySubscribed.Value = false;
+                    _isSourceCurrentlySubscribed.Value = false;
                 })
                     .Publish().RefCount();
         }
 
         // The data emission interval is looked up on startup only
         private static readonly HystrixConfigurationStream INSTANCE =
-                    new HystrixConfigurationStream(dataEmissionIntervalInMs);
+                    new HystrixConfigurationStream(DataEmissionIntervalInMs);
 
         public static HystrixConfigurationStream GetInstance()
         {
             return INSTANCE;
         }
 
-         // Return a ref-counted stream that will only do work when at least one subscriber is present
+        // Return a ref-counted stream that will only do work when at least one subscriber is present
         public IObservable<HystrixConfiguration> Observe()
         {
-            return allConfigurationStream;
+            return _allConfigurationStream;
         }
 
         public IObservable<Dictionary<IHystrixCommandKey, HystrixCommandConfiguration>> ObserveCommandConfiguration()
         {
-            return allConfigurationStream.Map(OnlyCommandConfig);
+            return _allConfigurationStream.Map(OnlyCommandConfig);
         }
 
         public IObservable<Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolConfiguration>> ObserveThreadPoolConfiguration()
         {
-            return allConfigurationStream.Map(OnlyThreadPoolConfig);
+            return _allConfigurationStream.Map(OnlyThreadPoolConfig);
         }
 
         public IObservable<Dictionary<IHystrixCollapserKey, HystrixCollapserConfiguration>> ObserveCollapserConfiguration()
         {
-            return allConfigurationStream.Map(OnlyCollapserConfig);
+            return _allConfigurationStream.Map(OnlyCollapserConfig);
         }
 
-        public int IntervalInMilliseconds
-        {
-            get { return this.intervalInMilliseconds; }
-        }
+        public int IntervalInMilliseconds { get; }
 
         public bool IsSourceCurrentlySubscribed
         {
-            get { return isSourceCurrentlySubscribed.Value; }
+            get { return _isSourceCurrentlySubscribed.Value; }
         }
 
         internal static HystrixConfigurationStream GetNonSingletonInstanceOnlyUsedInUnitTests(int delayInMs)
@@ -120,12 +106,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
         private static Func<long, Dictionary<IHystrixCommandKey, HystrixCommandConfiguration>> AllCommandConfig { get; } =
             (long timestamp) =>
             {
-                Dictionary<IHystrixCommandKey, HystrixCommandConfiguration> commandConfigPerKey = new Dictionary<IHystrixCommandKey, HystrixCommandConfiguration>();
-                foreach (HystrixCommandMetrics commandMetrics in HystrixCommandMetrics.GetInstances())
+                var commandConfigPerKey = new Dictionary<IHystrixCommandKey, HystrixCommandConfiguration>();
+                foreach (var commandMetrics in HystrixCommandMetrics.GetInstances())
                 {
-                    IHystrixCommandKey commandKey = commandMetrics.CommandKey;
-                    IHystrixThreadPoolKey threadPoolKey = commandMetrics.ThreadPoolKey;
-                    IHystrixCommandGroupKey groupKey = commandMetrics.CommandGroup;
+                    var commandKey = commandMetrics.CommandKey;
+                    var threadPoolKey = commandMetrics.ThreadPoolKey;
+                    var groupKey = commandMetrics.CommandGroup;
                     commandConfigPerKey.Add(commandKey, SampleCommandConfiguration(commandKey, threadPoolKey, groupKey, commandMetrics.Properties));
                 }
 
@@ -135,10 +121,10 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
         private static Func<long, Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolConfiguration>> AllThreadPoolConfig { get; } =
             (long timestamp) =>
             {
-                Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolConfiguration> threadPoolConfigPerKey = new Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolConfiguration>();
-                foreach (HystrixThreadPoolMetrics threadPoolMetrics in HystrixThreadPoolMetrics.GetInstances())
+                var threadPoolConfigPerKey = new Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolConfiguration>();
+                foreach (var threadPoolMetrics in HystrixThreadPoolMetrics.GetInstances())
                 {
-                    IHystrixThreadPoolKey threadPoolKey = threadPoolMetrics.ThreadPoolKey;
+                    var threadPoolKey = threadPoolMetrics.ThreadPoolKey;
                     threadPoolConfigPerKey.Add(threadPoolKey, SampleThreadPoolConfiguration(threadPoolKey, threadPoolMetrics.Properties));
                 }
 
@@ -148,10 +134,10 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
         private static Func<long, Dictionary<IHystrixCollapserKey, HystrixCollapserConfiguration>> AllCollapserConfig { get; } =
             (long timestamp) =>
             {
-                Dictionary<IHystrixCollapserKey, HystrixCollapserConfiguration> collapserConfigPerKey = new Dictionary<IHystrixCollapserKey, HystrixCollapserConfiguration>();
-                foreach (HystrixCollapserMetrics collapserMetrics in HystrixCollapserMetrics.GetInstances())
+                var collapserConfigPerKey = new Dictionary<IHystrixCollapserKey, HystrixCollapserConfiguration>();
+                foreach (var collapserMetrics in HystrixCollapserMetrics.GetInstances())
                 {
-                    IHystrixCollapserKey collapserKey = collapserMetrics.CollapserKey;
+                    var collapserKey = collapserMetrics.CollapserKey;
                     collapserConfigPerKey.Add(collapserKey, SampleCollapserConfiguration(collapserKey, collapserMetrics.Properties));
                 }
 

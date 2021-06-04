@@ -1,23 +1,13 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Steeltoe.Common;
-using Steeltoe.Extensions.Configuration.ConfigServer;
 using System.IO;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
@@ -50,7 +40,8 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
                       ""cloud"": {
                         ""config"": {
                             ""uri"": ""http://localhost:8888"",
-                            ""env"": ""development""
+                            ""env"": ""development"",
+                            ""failfast"": ""true""
                         }
                       }
                     }
@@ -78,7 +69,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
 
         [Fact]
         [Trait("Category", "Integration")]
-        public async void SpringCloudConfigServer_ReturnsExpectedDefaultData_AsInjectedOptions()
+        public async Task SpringCloudConfigServer_ReturnsExpectedDefaultData_AsInjectedOptions()
         {
             // These settings match the default java config server
             var appsettings = @"
@@ -93,7 +84,8 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
                             ""env"": ""development"",
                             ""health"": {
                                 ""enabled"": true
-                            }
+                            },
+                            ""failfast"": ""true""
                         }
                       }
                     }
@@ -112,22 +104,20 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
                 });
 
             // Act and Assert (TestServer expects Spring Cloud Config server to be running)
-            using (var server = new TestServer(builder))
-            {
-                var client = server.CreateClient();
-                var result = await client.GetStringAsync("http://localhost/Home/VerifyAsInjectedOptions");
+            using var server = new TestServer(builder);
+            var client = server.CreateClient();
+            var result = await client.GetStringAsync("http://localhost/Home/VerifyAsInjectedOptions");
 
-                Assert.Equal(
-                    "spam" +
-                    "from foo development" +
-                    "Spring Cloud Samples" +
-                    "https://github.com/spring-cloud-samples", result);
-            }
+            Assert.Equal(
+                "spam" +
+                "from foo development" +
+                "Spring Cloud Samples" +
+                "https://github.com/spring-cloud-samples", result);
         }
 
         [Fact]
         [Trait("Category", "Integration")]
-        public async void SpringCloudConfigServer_ConfiguredViaCloudfoundryEnv_ReturnsExpectedDefaultData_AsInjectedOptions()
+        public async Task SpringCloudConfigServer_ConfiguredViaCloudfoundryEnv_ReturnsExpectedDefaultData_AsInjectedOptions()
         {
             // Arrange
             var vcap_application = @" 
@@ -181,7 +171,8 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
                     ""spring"": {
                         ""cloud"": {
                             ""config"": {
-                                ""validateCertificates"": false
+                                ""validateCertificates"": false,
+                                ""failfast"": ""true""
                             }
                         }
                     }
@@ -202,17 +193,15 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
             try
             {
                 // Act and Assert (TestServer expects Spring Cloud Config server to be running @ localhost:8888)
-                using (var server = new TestServer(builder))
-                {
-                    var client = server.CreateClient();
-                    var result = await client.GetStringAsync("http://localhost/Home/VerifyAsInjectedOptions");
+                using var server = new TestServer(builder);
+                var client = server.CreateClient();
+                var result = await client.GetStringAsync("http://localhost/Home/VerifyAsInjectedOptions");
 
-                    Assert.Equal(
-                        "spam" +
-                        "from foo development" +
-                        "Spring Cloud Samples" +
-                        "https://github.com/spring-cloud-samples", result);
-                }
+                Assert.Equal(
+                    "spam" +
+                    "from foo development" +
+                    "Spring Cloud Samples" +
+                    "https://github.com/spring-cloud-samples", result);
             }
             finally
             {
@@ -223,7 +212,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
 
         [Fact(Skip = "Requires matching PCF environment with SCCS provisioned")]
         [Trait("Category", "Integration")]
-        public async void SpringCloudConfigServer_ConfiguredViaCloudfoundryEnv()
+        public async Task SpringCloudConfigServer_ConfiguredViaCloudfoundryEnv()
         {
             // Arrange
             var vcap_application = @" 
@@ -278,7 +267,8 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
                     ""spring"": {
                         ""cloud"": {
                             ""config"": {
-                                ""validate_certificates"": false
+                                ""validate_certificates"": false,
+                                ""failfast"": ""true""
                             }
                         }
                     }
@@ -298,17 +288,15 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
             try
             {
                 // Act and Assert (TestServer expects Spring Cloud Config server to be running)
-                using (var server = new TestServer(builder))
-                {
-                    var client = server.CreateClient();
-                    var result = await client.GetStringAsync("http://localhost/Home/VerifyAsInjectedOptions");
+                using var server = new TestServer(builder);
+                var client = server.CreateClient();
+                var result = await client.GetStringAsync("http://localhost/Home/VerifyAsInjectedOptions");
 
-                    Assert.Equal(
-                        "spam" +
-                        "barcelona" +
-                        "Spring Cloud Samples" +
-                        "https://github.com/spring-cloud-samples", result);
-                }
+                Assert.Equal(
+                    "spam" +
+                    "barcelona" +
+                    "Spring Cloud Samples" +
+                    "https://github.com/spring-cloud-samples", result);
             }
             finally
             {
@@ -363,7 +351,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
         //      fetchRegistry: true
         //      serviceUrl:
         //          defaultZone: http://localhost:8761/eureka/
-        [Fact]
+        [Fact(Skip = "Config server image needs to be enhanced to support discovery-first")]
         [Trait("Category", "Integration")]
         public void SpringCloudConfigServer_DiscoveryFirst_ReturnsExpectedDefaultData()
         {
@@ -378,6 +366,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
                         ""config"": {
                             ""uri"": ""http://localhost:8888"",
                             ""env"": ""development"",
+                            ""failfast"": ""true"",
                             ""discovery"": {
                                 ""enabled"": true
                             }
@@ -413,7 +402,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
 
         [Fact]
         [Trait("Category", "Integration")]
-        public async void SpringCloudConfigServer_WithHealthEnabled_ReturnsHealth()
+        public async Task SpringCloudConfigServer_WithHealthEnabled_ReturnsHealth()
         {
             // These settings match the default java config server
             var appsettings = @"
@@ -428,7 +417,8 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
                             ""env"": ""development"",
                             ""health"": {
                                 ""enabled"": true
-                            }
+                            },
+                            ""failfast"": ""true""
                         }
                       }
                     }
@@ -446,12 +436,13 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer.ITest
                 });
 
             // Act and Assert (TestServer expects Spring Cloud Config server to be running)
-            using (var server = new TestServer(builder))
-            {
-                var client = server.CreateClient();
-                var result = await client.GetStringAsync("http://localhost/Home/Health");
-                Assert.Equal("UP,https://github.com/spring-cloud-samples/config-repo/foo-development.properties,https://github.com/spring-cloud-samples/config-repo/foo.properties,https://github.com/spring-cloud-samples/config-repo/application.yml,", result);
-            }
+            using var server = new TestServer(builder);
+            var client = server.CreateClient();
+            var result = await client.GetStringAsync("http://localhost/Home/Health");
+
+            // after switching to newer config server image, the health response has changed to
+            // https://github.com/spring-cloud-samples/config-repo/Config resource 'file [/tmp/config-repo-4389533880216684481/application.yml' via location '' (document #0)"
+            Assert.StartsWith("UP,https://github.com/spring-cloud-samples/config-repo/foo-development.properties,https://github.com/spring-cloud-samples/config-repo/foo.properties,https://github.com/spring-cloud-samples/config-repo/Config", result);
         }
     }
 }

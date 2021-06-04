@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -116,7 +106,7 @@ namespace Steeltoe.Extensions.Configuration.RandomValue
             }
 
             // random:int(10), random:int(10,20), random:int[10], random:int[10,20]
-            string range = GetRange(type, "int");
+            var range = GetRange(type, "int");
             if (range != null)
             {
                 return GetNextIntInRange(range).ToString();
@@ -147,7 +137,7 @@ namespace Steeltoe.Extensions.Configuration.RandomValue
         {
             if (type.StartsWith(prefix))
             {
-                int startIndex = prefix.Length + 1;
+                var startIndex = prefix.Length + 1;
                 if (type.Length > startIndex)
                 {
                     return type.Substring(startIndex, type.Length - 1 - startIndex);
@@ -159,39 +149,35 @@ namespace Steeltoe.Extensions.Configuration.RandomValue
 
         internal int GetNextIntInRange(string range)
         {
-            string[] tokens = range.Split(',');
-            int start = 0;
-            int.TryParse(tokens[0], out start);
+            var tokens = range.Split(',');
+            int.TryParse(tokens[0], out var start);
             if (tokens.Length == 1)
             {
                 return _random.Next(start);
             }
 
-            int max = 0;
-            int.TryParse(tokens[1], out max);
+            int.TryParse(tokens[1], out var max);
             return _random.Next(start, max);
         }
 
         internal long GetNextLongInRange(string range)
         {
-            string[] tokens = range.Split(',');
-            long start = 0;
-            long.TryParse(tokens[0], out start);
+            var tokens = range.Split(',');
+            long.TryParse(tokens[0], out var start);
             if (tokens.Length == 1)
             {
                 return Math.Abs(GetLong() % start);
             }
 
-            long lowerBound = start;
-            long upperBound = 0;
-            long.TryParse(tokens[1], out upperBound);
-            upperBound = upperBound - lowerBound;
+            var lowerBound = start;
+            long.TryParse(tokens[1], out var upperBound);
+            upperBound -= lowerBound;
             return lowerBound + Math.Abs(GetLong() % upperBound);
         }
 
         internal string GetRandomBytes()
         {
-            byte[] bytes = new byte[16];
+            var bytes = new byte[16];
             _random.NextBytes(bytes);
             return BitConverter.ToString(bytes).Replace("-", string.Empty);
         }

@@ -21,7 +21,7 @@ using System.Reflection;
 
 namespace Steeltoe
 {
-    public class TestHelpers
+    public static class TestHelpers
     {
         public static string CreateTempFile(string contents)
         {
@@ -55,7 +55,9 @@ namespace Steeltoe
             serviceCollection.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Trace));
             serviceCollection.AddLogging(builder => builder.AddConsole((opts) =>
             {
+#if NETCOREAPP3_1
                 opts.DisableColors = true;
+#endif
             }));
             serviceCollection.AddLogging(builder => builder.AddDebug());
             return serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
@@ -70,7 +72,7 @@ namespace Steeltoe
 
         public static string EntryAssemblyName => Assembly.GetEntryAssembly().GetName().Name;
 
-        public static string VCAP_APPLICATION = @"
+        public static readonly string VCAP_APPLICATION = @"
             {
                 ""limits"": {
                     ""fds"": 16384,

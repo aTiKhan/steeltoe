@@ -1,47 +1,38 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
-using Steeltoe.Messaging.Rabbit.Config;
+using Steeltoe.Messaging.RabbitMQ.Config;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using RC = RabbitMQ.Client;
 
-namespace Steeltoe.Messaging.Rabbit.Connection
+namespace Steeltoe.Messaging.RabbitMQ.Connection
 {
     public class SingleConnectionFactory : AbstractConnectionFactory
     {
+        public const string DEFAULT_SERVICE_NAME = "scFactory";
+
         private readonly object _connectionMonitor = new object();
 
-        public SingleConnectionFactory()
-            : this((string)null)
+        public SingleConnectionFactory(ILoggerFactory loggerFactory = null)
+            : this((string)null, loggerFactory)
         {
         }
 
-        public SingleConnectionFactory(int port)
-            : this(null, port)
+        public SingleConnectionFactory(int port, ILoggerFactory loggerFactory = null)
+            : this(null, port, loggerFactory)
         {
         }
 
-        public SingleConnectionFactory(string hostname)
-            : this(hostname, RabbitOptions.DEFAULT_PORT)
+        public SingleConnectionFactory(string hostname, ILoggerFactory loggerFactory = null)
+            : this(hostname, RabbitOptions.DEFAULT_PORT, loggerFactory)
         {
         }
 
-        public SingleConnectionFactory(string hostname, int port)
-            : base(new RabbitMQ.Client.ConnectionFactory())
+        public SingleConnectionFactory(string hostname, int port, ILoggerFactory loggerFactory = null)
+            : base(new RC.ConnectionFactory(), loggerFactory)
         {
             if (string.IsNullOrEmpty(hostname))
             {
@@ -50,17 +41,20 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
             Host = hostname;
             Port = port;
+            ServiceName = DEFAULT_SERVICE_NAME;
         }
 
-        public SingleConnectionFactory(Uri uri)
-            : base(new RabbitMQ.Client.ConnectionFactory())
+        public SingleConnectionFactory(Uri uri, ILoggerFactory loggerFactory = null)
+            : base(new RC.ConnectionFactory(), loggerFactory)
         {
             Uri = uri;
+            ServiceName = DEFAULT_SERVICE_NAME;
         }
 
-        public SingleConnectionFactory(RabbitMQ.Client.IConnectionFactory rabbitConnectionFactory)
-            : base(rabbitConnectionFactory)
+        public SingleConnectionFactory(RC.IConnectionFactory rabbitConnectionFactory, ILoggerFactory loggerFactory = null)
+            : base(rabbitConnectionFactory, loggerFactory)
         {
+            ServiceName = DEFAULT_SERVICE_NAME;
         }
 
         public SharedConnectionProxy Connection { get; private set; }
@@ -142,7 +136,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                 Target = target;
             }
 
-            public IModel CreateChannel(bool transactional)
+            public RC.IModel CreateChannel(bool transactional)
             {
                 if (!IsOpen)
                 {
@@ -211,7 +205,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                 }
             }
 
-            public RabbitMQ.Client.IConnection Connection
+            public RC.IConnection Connection
             {
                 get
                 {

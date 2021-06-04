@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.Common.Util;
 using System;
@@ -22,7 +12,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Util
     {
         private static readonly HystrixTimer Instance = new HystrixTimer();
 
-        private readonly List<TimerReference> timerList = new List<TimerReference>();
+        private readonly List<TimerReference> _timerList = new List<TimerReference>();
         private readonly object _lock = new object();
 
         private HystrixTimer()
@@ -36,10 +26,10 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Util
 
         public static void Reset()
         {
-            HystrixTimer timer = GetInstance();
+            var timer = GetInstance();
             lock (timer._lock)
             {
-                foreach (TimerReference refr in timer.timerList)
+                foreach (var refr in timer._timerList)
                 {
                     refr.Dispose();
                 }
@@ -48,12 +38,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Util
 
         public TimerReference AddTimerListener(ITimerListener listener)
         {
-            TimerReference refr = new TimerReference(listener, TimeSpan.FromMilliseconds(listener.IntervalTimeInMilliseconds));
+            var refr = new TimerReference(listener, TimeSpan.FromMilliseconds(listener.IntervalTimeInMilliseconds));
             refr.Start();
 
             lock (_lock)
             {
-                timerList.Add(refr);
+                _timerList.Add(refr);
             }
 
             return refr;

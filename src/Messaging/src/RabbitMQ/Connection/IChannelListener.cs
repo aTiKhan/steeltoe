@@ -1,20 +1,10 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
-using RabbitMQ.Client;
+using RC=RabbitMQ.Client;
 
-namespace Steeltoe.Messaging.Rabbit.Connection
+namespace Steeltoe.Messaging.RabbitMQ.Connection
 {
     public interface IChannelListener
     {
@@ -23,12 +13,12 @@ namespace Steeltoe.Messaging.Rabbit.Connection
         /// </summary>
         /// <param name="channel">the created channel</param>
         /// <param name="transactional">true if channel is transactional</param>
-        void OnCreate(IModel channel, bool transactional);
+        void OnCreate(RC.IModel channel, bool transactional);
 
         /// <summary>
         /// Called when a channel has been shutdown
         /// </summary>
         /// <param name="args">the shutdown event arguments</param>
-        void OnShutDown(ShutdownEventArgs args);
+        void OnShutDown(RC.ShutdownEventArgs args);
     }
 }

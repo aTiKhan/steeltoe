@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Strategy;
 using Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency;
@@ -22,14 +12,14 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Collapser
 {
     public class RequestCollapserFactory
     {
-        private readonly ICollapserTimer timer;
-        private readonly HystrixConcurrencyStrategy concurrencyStrategy;
+        private readonly ICollapserTimer _timer;
+        private readonly HystrixConcurrencyStrategy _concurrencyStrategy;
 
         public RequestCollapserFactory(IHystrixCollapserKey collapserKey, RequestCollapserScope scope, ICollapserTimer timer, IHystrixCollapserOptions properties)
         {
             /* strategy: ConcurrencyStrategy */
-            concurrencyStrategy = HystrixPlugins.ConcurrencyStrategy;
-            this.timer = timer;
+            _concurrencyStrategy = HystrixPlugins.ConcurrencyStrategy;
+            _timer = timer;
             Scope = scope;
             CollapserKey = collapserKey;
             Properties = properties;
@@ -37,19 +27,19 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Collapser
 
         public static void Reset()
         {
-            globalScopedCollapsers.Clear();
-            requestScopedCollapsers.Clear();
+            GlobalScopedCollapsers.Clear();
+            RequestScopedCollapsers.Clear();
             HystrixTimer.Reset();
         }
 
         internal static void ResetRequest()
         {
-            requestScopedCollapsers.Clear();
+            RequestScopedCollapsers.Clear();
         }
 
         internal static RequestCollapserRequestVariable<BatchReturnType, ResponseType, RequestArgumentType> GetRequestVariable<BatchReturnType, ResponseType, RequestArgumentType>(string key)
         {
-            if (!requestScopedCollapsers.TryGetValue(key, out object result))
+            if (!RequestScopedCollapsers.TryGetValue(key, out var result))
             {
                 return null;
             }
@@ -81,16 +71,16 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Collapser
         }
 
         // String is CollapserKey.name() (we can't use CollapserKey directly as we can't guarantee it implements hashcode/equals correctly)
-        private static ConcurrentDictionary<string, object> globalScopedCollapsers = new ConcurrentDictionary<string, object>();
+        private static readonly ConcurrentDictionary<string, object> GlobalScopedCollapsers = new ConcurrentDictionary<string, object>();
 
         private RequestCollapser<BatchReturnType, ResponseType, RequestArgumentType> GetCollapserForGlobalScope<BatchReturnType, ResponseType, RequestArgumentType>(HystrixCollapser<BatchReturnType, ResponseType, RequestArgumentType> commandCollapser)
         {
-            var result = globalScopedCollapsers.GetOrAddEx(CollapserKey.Name, (k) => new RequestCollapser<BatchReturnType, ResponseType, RequestArgumentType>(commandCollapser, Properties, timer, concurrencyStrategy));
+            var result = GlobalScopedCollapsers.GetOrAddEx(CollapserKey.Name, (k) => new RequestCollapser<BatchReturnType, ResponseType, RequestArgumentType>(commandCollapser, Properties, _timer, _concurrencyStrategy));
             return (RequestCollapser<BatchReturnType, ResponseType, RequestArgumentType>)result;
         }
 
         // String is HystrixCollapserKey.name() (we can't use HystrixCollapserKey directly as we can't guarantee it implements hashcode/equals correctly)
-        private static ConcurrentDictionary<string, object> requestScopedCollapsers = new ConcurrentDictionary<string, object>();
+        private static readonly ConcurrentDictionary<string, object> RequestScopedCollapsers = new ConcurrentDictionary<string, object>();
 
         private RequestCollapser<BatchReturnType, ResponseType, RequestArgumentType> GetCollapserForUserRequest<BatchReturnType, ResponseType, RequestArgumentType>(HystrixCollapser<BatchReturnType, ResponseType, RequestArgumentType> commandCollapser)
         {
@@ -99,7 +89,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Collapser
 
         private RequestCollapserRequestVariable<BatchReturnType, ResponseType, RequestArgumentType> GetRequestVariableForCommand<BatchReturnType, ResponseType, RequestArgumentType>(HystrixCollapser<BatchReturnType, ResponseType, RequestArgumentType> commandCollapser)
         {
-            var result = requestScopedCollapsers.GetOrAddEx(commandCollapser.CollapserKey.Name, (k) => new RequestCollapserRequestVariable<BatchReturnType, ResponseType, RequestArgumentType>(commandCollapser, Properties, timer, concurrencyStrategy));
+            var result = RequestScopedCollapsers.GetOrAddEx(commandCollapser.CollapserKey.Name, (k) => new RequestCollapserRequestVariable<BatchReturnType, ResponseType, RequestArgumentType>(commandCollapser, Properties, _timer, _concurrencyStrategy));
             return (RequestCollapserRequestVariable<BatchReturnType, ResponseType, RequestArgumentType>)result;
         }
 

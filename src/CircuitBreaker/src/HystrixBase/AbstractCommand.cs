@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using Steeltoe.CircuitBreaker.Hystrix.CircuitBreaker;
@@ -122,20 +112,20 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         protected class HystrixCompletionSource
         {
-            private bool? canceled;
-            private bool resultSet;
+            private bool? _canceled;
+            private bool _resultSet;
 
             public HystrixCompletionSource(AbstractCommand<TResult> cmd)
             {
                 Source = new TaskCompletionSource<TResult>(cmd);
-                resultSet = false;
+                _resultSet = false;
             }
 
             public TaskCompletionSource<TResult> Source { get; }
 
-            public bool IsCanceled => canceled ?? false;
+            public bool IsCanceled => _canceled ?? false;
 
-            public bool IsCompleted => IsFaulted || IsCanceled || resultSet;
+            public bool IsCompleted => IsFaulted || IsCanceled || _resultSet;
 
             public bool IsFaulted => Exception != null;
 
@@ -157,7 +147,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             {
                 if (!IsCompleted)
                 {
-                    canceled = true;
+                    _canceled = true;
                 }
             }
 
@@ -165,7 +155,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             {
                 if (!IsCompleted)
                 {
-                    resultSet = true;
+                    _resultSet = true;
                     Result = result;
                 }
             }
@@ -221,7 +211,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
         protected readonly IHystrixCommandGroupKey commandGroup;
 
         protected HystrixCompletionSource tcs;
-        private readonly ILogger logger;
+        private readonly ILogger _logger;
 
         #endregion Fields
 
@@ -241,7 +231,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             HystrixCommandExecutionHook executionHook,
             ILogger logger = null)
         {
-            this.logger = logger;
+            _logger = logger;
             commandGroup = InitGroupKey(group);
             commandKey = InitCommandKey(key, GetType());
             options = InitCommandOptions(commandKey, optionsStrategy, commandOptionsDefaults);
@@ -321,7 +311,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         protected static IHystrixCommandKey InitCommandKey(IHystrixCommandKey fromConstructor, Type clazz)
         {
-            if (fromConstructor == null || fromConstructor.Name.Trim().Equals(string.Empty))
+            if (fromConstructor == null || string.IsNullOrWhiteSpace(fromConstructor.Name))
             {
                 var keyName = clazz.Name;
                 return HystrixCommandKeyDefault.AsKey(keyName);
@@ -585,30 +575,30 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         protected Exception DecomposeException(Exception e)
         {
-            if (e is HystrixBadRequestException)
+            if (e is HystrixBadRequestException exception)
             {
-                return (HystrixBadRequestException)e;
+                return exception;
             }
 
-            if (e.InnerException is HystrixBadRequestException)
+            if (e.InnerException is HystrixBadRequestException exception1)
             {
-                return (HystrixBadRequestException)e.InnerException;
+                return exception1;
             }
 
-            if (e is HystrixRuntimeException)
+            if (e is HystrixRuntimeException exception2)
             {
-                return (HystrixRuntimeException)e;
+                return exception2;
             }
 
             // if we have an exception we know about we'll throw it directly without the wrapper exception
-            if (e.InnerException is HystrixRuntimeException)
+            if (e.InnerException is HystrixRuntimeException exception3)
             {
-                return (HystrixRuntimeException)e.InnerException;
+                return exception3;
             }
 
             // we don't know what kind of exception this is so create a generic message and throw a new HystrixRuntimeException
             var message = LogMessagePrefix + " failed while executing. {0}";
-            logger?.LogDebug(message, e); // debug only since we're throwing the exception and someone higher will do something with it
+            _logger?.LogDebug(message, e); // debug only since we're throwing the exception and someone higher will do something with it
             return new HystrixRuntimeException(FailureType.COMMAND_EXCEPTION, GetType(), message, e, null);
         }
 
@@ -653,7 +643,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onThreadComplete: {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onThreadComplete: {0}", hookEx);
             }
         }
 
@@ -668,7 +658,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             if (IsUnrecoverableError(originalException))
             {
                 var e = originalException;
-                logger?.LogError("Unrecoverable Error for HystrixCommand so will throw HystrixRuntimeException and not apply fallback: {0} ", e);
+                _logger?.LogError("Unrecoverable Error for HystrixCommand so will throw HystrixRuntimeException and not apply fallback: {0} ", e);
 
                 /* executionHook for all errors */
                 e = WrapWithOnErrorHook(failureType, e);
@@ -680,7 +670,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             {
                 if (IsRecoverableError(originalException))
                 {
-                    logger?.LogWarning("Recovered from Error by serving Hystrix fallback: {0}", originalException);
+                    _logger?.LogWarning("Recovered from Error by serving Hystrix fallback: {0}", originalException);
                 }
 
                 if (options.FallbackEnabled)
@@ -745,7 +735,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             if (fe is InvalidOperationException)
             {
                 var latency = Time.CurrentTimeMillis - _executionResult.StartTimestamp;
-                logger?.LogDebug("No fallback for HystrixCommand: {0} ", fe); // debug only since we're throwing the exception and someone higher will do something with it
+                _logger?.LogDebug("No fallback for HystrixCommand: {0} ", fe); // debug only since we're throwing the exception and someone higher will do something with it
                 _eventNotifier.MarkEvent(HystrixEventType.FALLBACK_MISSING, commandKey);
                 _executionResult = _executionResult.AddEvent((int)latency, HystrixEventType.FALLBACK_MISSING);
 
@@ -762,7 +752,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             else
             {
                 var latency = Time.CurrentTimeMillis - _executionResult.StartTimestamp;
-                logger?.LogDebug("HystrixCommand execution {0} and fallback failed: {1}", failureType.ToString(), fe);
+                _logger?.LogDebug("HystrixCommand execution {0} and fallback failed: {1}", failureType.ToString(), fe);
                 _eventNotifier.MarkEvent(HystrixEventType.FALLBACK_FAILURE, commandKey);
                 _executionResult = _executionResult.AddEvent((int)latency, HystrixEventType.FALLBACK_FAILURE);
 
@@ -781,7 +771,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
         private void HandleFallbackDisabledByEmittingError(Exception underlying, FailureType failureType, string message)
         {
             /* fallback is disabled so throw HystrixRuntimeException */
-            logger?.LogDebug("Fallback disabled for HystrixCommand so will throw HystrixRuntimeException: {0} ", underlying); // debug only since we're throwing the exception and someone higher will do something with it
+            _logger?.LogDebug("Fallback disabled for HystrixCommand so will throw HystrixRuntimeException: {0} ", underlying); // debug only since we're throwing the exception and someone higher will do something with it
 
             /* executionHook for all errors */
             var wrapped = WrapWithOnErrorHook(failureType, underlying);
@@ -798,7 +788,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             var latencyWithFallback = Time.CurrentTimeMillis - _executionResult.StartTimestamp;
             _eventNotifier.MarkEvent(HystrixEventType.FALLBACK_REJECTION, commandKey);
             _executionResult = _executionResult.AddEvent((int)latencyWithFallback, HystrixEventType.FALLBACK_REJECTION);
-            logger?.LogDebug("HystrixCommand Fallback Rejection."); // debug only since we're throwing the exception and someone higher will do something with it
+            _logger?.LogDebug("HystrixCommand Fallback Rejection."); // debug only since we're throwing the exception and someone higher will do something with it
 
             // if we couldn't acquire a permit, we "fail fast" by throwing an exception
             tcs.TrySetException(new HystrixRuntimeException(
@@ -814,7 +804,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             var semaphoreRejectionException = new Exception("could not acquire a semaphore for execution");
             _executionResult = _executionResult.SetExecutionException(semaphoreRejectionException);
             _eventNotifier.MarkEvent(HystrixEventType.SEMAPHORE_REJECTED, commandKey);
-            logger?.LogDebug("HystrixCommand Execution Rejection by Semaphore."); // debug only since we're throwing the exception and someone higher will do something with it
+            _logger?.LogDebug("HystrixCommand Execution Rejection by Semaphore."); // debug only since we're throwing the exception and someone higher will do something with it
 
             // retrieve a fallback or throw an exception if no fallback available
             HandleFallbackOrThrowException(
@@ -882,7 +872,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         private void HandleFailureViaFallback(Exception underlying)
         {
-            logger?.LogDebug("Error executing HystrixCommand.Run(). Proceeding to fallback logic...: {0}", underlying);
+            _logger?.LogDebug("Error executing HystrixCommand.Run(). Proceeding to fallback logic...: {0}", underlying);
 
             // report failure
             _eventNotifier.MarkEvent(HystrixEventType.FAILURE, commandKey);
@@ -909,12 +899,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                 }
                 else
                 {
-                    logger?.LogWarning("ExecutionHook.onError returned an exception that was not an instance of HystrixBadRequestException so will be ignored: {0}", decorated);
+                    _logger?.LogWarning("ExecutionHook.onError returned an exception that was not an instance of HystrixBadRequestException so will be ignored: {0}", decorated);
                 }
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onError: {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onError: {0}", hookEx);
             }
 
             tcs.TrySetException(toEmit);
@@ -942,7 +932,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onCacheHit: {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onCacheHit: {0}", hookEx);
             }
 
             if (cmd._token.IsCancellationRequested)
@@ -1194,7 +1184,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                 }
                 else
                 {
-                    result = default(TResult);
+                    result = default;
                 }
 
                 return result;
@@ -1207,7 +1197,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                 if (flatten.InnerException is TaskCanceledException && isCommandTimedOut.Value == TimedOutStatus.TIMED_OUT)
                 {
                     // End task pass
-                    return default(TResult);
+                    return default;
                 }
 
                 var ex = WrapWithOnExecutionErrorHook(flatten.InnerException);
@@ -1225,7 +1215,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                 if (isCommandTimedOut.Value == TimedOutStatus.TIMED_OUT)
                 {
                     // End task pass
-                    return default(TResult);
+                    return default;
                 }
 
                 var ex = WrapWithOnExecutionErrorHook(e);
@@ -1348,7 +1338,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                 }
                 catch (Exception hookEx)
                 {
-                    logger?.LogWarning("Error calling HystrixCommandExecutionHook.onSuccess - {0}", hookEx);
+                    _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onSuccess - {0}", hookEx);
                 }
             }
         }
@@ -1423,7 +1413,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onFallbackSuccess - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onFallbackSuccess - {0}", hookEx);
             }
         }
 
@@ -1435,7 +1425,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onFallbackEmit - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onFallbackEmit - {0}", hookEx);
                 return r;
             }
         }
@@ -1448,7 +1438,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.OnFallbackStart - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.OnFallbackStart - {0}", hookEx);
             }
         }
 
@@ -1460,7 +1450,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onEmit - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onEmit - {0}", hookEx);
                 return result;
             }
         }
@@ -1473,7 +1463,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onError - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onError - {0}", hookEx);
                 return e;
             }
         }
@@ -1486,7 +1476,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onExecutionSuccess - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onExecutionSuccess - {0}", hookEx);
             }
         }
 
@@ -1498,7 +1488,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onExecutionError - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onExecutionError - {0}", hookEx);
                 return e;
             }
         }
@@ -1511,7 +1501,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onExecutionEmit - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onExecutionEmit - {0}", hookEx);
                 return r;
             }
         }
@@ -1531,7 +1521,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             }
             catch (Exception hookEx)
             {
-                logger?.LogWarning("Error calling HystrixCommandExecutionHook.onFallbackError - {0}", hookEx);
+                _logger?.LogWarning("Error calling HystrixCommandExecutionHook.onFallbackError - {0}", hookEx);
                 return e;
             }
         }

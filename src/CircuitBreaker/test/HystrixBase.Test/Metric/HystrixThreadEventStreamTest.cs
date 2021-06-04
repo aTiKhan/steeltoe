@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Test;
 using System;
@@ -28,7 +18,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
     {
         private class LatchedObserver<T> : ObserverBase<T>
         {
-            private CountdownEvent latch;
+            private readonly CountdownEvent latch;
 
             public LatchedObserver(CountdownEvent latch)
             {
@@ -50,13 +40,13 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             }
         }
 
-        private IHystrixCommandKey commandKey;
-        private IHystrixThreadPoolKey threadPoolKey;
+        private readonly IHystrixCommandKey commandKey;
+        private readonly IHystrixThreadPoolKey threadPoolKey;
 
-        private HystrixThreadEventStream writeToStream;
-        private HystrixCommandCompletionStream readCommandStream;
-        private HystrixThreadPoolCompletionStream readThreadPoolStream;
-        private ITestOutputHelper output;
+        private readonly HystrixThreadEventStream writeToStream;
+        private readonly HystrixCommandCompletionStream readCommandStream;
+        private readonly HystrixThreadPoolCompletionStream readThreadPoolStream;
+        private readonly ITestOutputHelper output;
 
         public HystrixThreadEventStreamTest(ITestOutputHelper output)
             : base()
@@ -74,8 +64,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void NoEvents()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -92,8 +82,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestThreadIsolatedSuccess()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -101,7 +91,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.SUCCESS).SetExecutedInThread();
+            var result = ExecutionResult.From(HystrixEventType.SUCCESS).SetExecutedInThread();
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -112,8 +102,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestSemaphoreIsolatedSuccess()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -121,7 +111,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.SUCCESS);
+            var result = ExecutionResult.From(HystrixEventType.SUCCESS);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -132,8 +122,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestThreadIsolatedFailure()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -141,7 +131,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.FAILURE).SetExecutedInThread();
+            var result = ExecutionResult.From(HystrixEventType.FAILURE).SetExecutedInThread();
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -152,8 +142,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestSemaphoreIsolatedFailure()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -161,7 +151,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.FAILURE);
+            var result = ExecutionResult.From(HystrixEventType.FAILURE);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -172,8 +162,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestThreadIsolatedTimeout()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -181,7 +171,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.TIMEOUT).SetExecutedInThread();
+            var result = ExecutionResult.From(HystrixEventType.TIMEOUT).SetExecutedInThread();
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -192,8 +182,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestSemaphoreIsolatedTimeout()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -201,7 +191,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.TIMEOUT);
+            var result = ExecutionResult.From(HystrixEventType.TIMEOUT);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -212,8 +202,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestThreadIsolatedBadRequest()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -221,7 +211,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.BAD_REQUEST).SetExecutedInThread();
+            var result = ExecutionResult.From(HystrixEventType.BAD_REQUEST).SetExecutedInThread();
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -232,8 +222,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestSemaphoreIsolatedBadRequest()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -241,7 +231,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.BAD_REQUEST);
+            var result = ExecutionResult.From(HystrixEventType.BAD_REQUEST);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -252,8 +242,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestThreadRejectedCommand()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -261,7 +251,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.THREAD_POOL_REJECTED);
+            var result = ExecutionResult.From(HystrixEventType.THREAD_POOL_REJECTED);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -272,8 +262,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestSemaphoreRejectedCommand()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -281,7 +271,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.SEMAPHORE_REJECTED);
+            var result = ExecutionResult.From(HystrixEventType.SEMAPHORE_REJECTED);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));
@@ -292,8 +282,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestThreadIsolatedResponseFromCache()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<IList<HystrixCommandCompletion>> commandListSubscriber = new LatchedObserver<IList<HystrixCommandCompletion>>(commandLatch);
             readCommandStream.Observe().Buffer(TimeSpan.FromMilliseconds(500)).Take(1)
@@ -306,9 +296,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.SUCCESS).SetExecutedInThread();
-            ExecutionResult cache1 = ExecutionResult.From(HystrixEventType.RESPONSE_FROM_CACHE);
-            ExecutionResult cache2 = ExecutionResult.From(HystrixEventType.RESPONSE_FROM_CACHE);
+            var result = ExecutionResult.From(HystrixEventType.SUCCESS).SetExecutedInThread();
+            var cache1 = ExecutionResult.From(HystrixEventType.RESPONSE_FROM_CACHE);
+            var cache2 = ExecutionResult.From(HystrixEventType.RESPONSE_FROM_CACHE);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
             writeToStream.ExecutionDone(cache1, commandKey, threadPoolKey);
             writeToStream.ExecutionDone(cache2, commandKey, threadPoolKey);
@@ -321,8 +311,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestSemaphoreIsolatedResponseFromCache()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<IList<HystrixCommandCompletion>> commandListSubscriber = new LatchedObserver<IList<HystrixCommandCompletion>>(commandLatch);
             readCommandStream.Observe().Buffer(TimeSpan.FromMilliseconds(500)).Take(1)
@@ -336,9 +326,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.SUCCESS);
-            ExecutionResult cache1 = ExecutionResult.From(HystrixEventType.RESPONSE_FROM_CACHE);
-            ExecutionResult cache2 = ExecutionResult.From(HystrixEventType.RESPONSE_FROM_CACHE);
+            var result = ExecutionResult.From(HystrixEventType.SUCCESS);
+            var cache1 = ExecutionResult.From(HystrixEventType.RESPONSE_FROM_CACHE);
+            var cache2 = ExecutionResult.From(HystrixEventType.RESPONSE_FROM_CACHE);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
             writeToStream.ExecutionDone(cache1, commandKey, threadPoolKey);
             writeToStream.ExecutionDone(cache2, commandKey, threadPoolKey);
@@ -351,8 +341,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestShortCircuit()
         {
-            CountdownEvent commandLatch = new CountdownEvent(1);
-            CountdownEvent threadPoolLatch = new CountdownEvent(1);
+            var commandLatch = new CountdownEvent(1);
+            var threadPoolLatch = new CountdownEvent(1);
 
             IObserver<HystrixCommandCompletion> commandSubscriber = new LatchedObserver<HystrixCommandCompletion>(commandLatch);
             readCommandStream.Observe().Take(1).Subscribe(commandSubscriber);
@@ -360,7 +350,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
             IObserver<HystrixCommandCompletion> threadPoolSubscriber = new LatchedObserver<HystrixCommandCompletion>(threadPoolLatch);
             readThreadPoolStream.Observe().Take(1).Subscribe(threadPoolSubscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.SHORT_CIRCUITED);
+            var result = ExecutionResult.From(HystrixEventType.SHORT_CIRCUITED);
             writeToStream.ExecutionDone(result, commandKey, threadPoolKey);
 
             Assert.True(commandLatch.Wait(1000));

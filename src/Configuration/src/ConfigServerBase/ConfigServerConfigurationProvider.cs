@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -20,12 +10,12 @@ using Steeltoe.Extensions.Configuration.Placeholder;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Net.Security;
+using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +38,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         public const string STATE_HEADER = "X-Config-State";
 
         protected ConfigServerClientSettings _settings; // Current settings
-        protected HttpClient _client;
+        protected HttpClient _httpClient;
         protected ILogger _logger;
         protected ILoggerFactory _loggerFactory;
         protected IConfiguration _configuration;
@@ -64,7 +54,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         private static readonly char[] COMMA_DELIMIT = new char[] { ',' };
         private static readonly string[] EMPTY_LABELS = new string[] { string.Empty };
 
-        private Timer tokenRenewTimer;
+        private Timer _tokenRenewTimer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigServerConfigurationProvider"/> class with default
@@ -86,7 +76,6 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
             _loggerFactory = logFactory;
             _logger = logFactory?.CreateLogger<ConfigServerConfigurationProvider>();
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _client = null;
             _configuration = new ConfigurationBuilder().Build();
         }
 
@@ -99,7 +88,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         public ConfigServerConfigurationProvider(ConfigServerClientSettings settings, HttpClient httpClient, ILoggerFactory logFactory = null)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _client = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _logger = logFactory?.CreateLogger<ConfigServerConfigurationProvider>();
             _loggerFactory = logFactory;
             _configuration = new ConfigurationBuilder().Build();
@@ -125,7 +114,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         public ConfigServerConfigurationProvider(ConfigServerConfigurationSource source, HttpClient httpClient)
             : this(source.DefaultSettings, source.LogFactory)
         {
-            _client = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _ = source.Configuration as IConfigurationRoot;
             _configuration = WrapWithPlaceholderResolver(source.Configuration);
             ConfigurationSettingsHelper.Initialize(PREFIX, _settings, _configuration);
@@ -135,6 +124,13 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         /// Gets the configuration settings the provider uses when accessing the server.
         /// </summary>
         public virtual ConfigServerClientSettings Settings => _settings;
+
+        internal JsonSerializerOptions SerializerOptions { get; private set; } =
+            new JsonSerializerOptions
+                {
+                    IgnoreNullValues = true,
+                    PropertyNameCaseInsensitive = true,
+                };
 
         internal IDictionary<string, string> Properties => Data;
 
@@ -152,8 +148,8 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         [Obsolete("Will be removed in next release, use the ConfigServerConfigurationSource")]
         public virtual IConfigurationProvider Build(IConfigurationBuilder builder)
         {
-            ConfigurationBuilder config = new ConfigurationBuilder();
-            foreach (IConfigurationSource s in builder.Sources)
+            var config = new ConfigurationBuilder();
+            foreach (var s in builder.Sources)
             {
                 if (s == this)
                 {
@@ -233,7 +229,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
 
             try
             {
-                foreach (string label in GetLabels())
+                foreach (var label in GetLabels())
                 {
                     Task<ConfigEnvironment> task = null;
 
@@ -256,7 +252,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                     }
 
                     // Wait for results from server
-                    ConfigEnvironment env = task.GetAwaiter().GetResult();
+                    var env = task.GetAwaiter().GetResult();
 
                     // Update config Data dictionary with any results
                     if (env != null)
@@ -280,7 +276,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                             var sources = env.PropertySources;
                             if (sources != null)
                             {
-                                int index = sources.Count - 1;
+                                var index = sources.Count - 1;
                                 for (; index >= 0; index--)
                                 {
                                     AddPropertySource(sources[index], newData);
@@ -324,7 +320,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
 
         internal void DiscoverServerInstances(ConfigServerDiscoveryService discoveryService)
         {
-            IList<IServiceInstance> instances = discoveryService.GetConfigServerInstances();
+            var instances = discoveryService.GetConfigServerInstances();
             if (instances == null || instances.Count == 0)
             {
                 if (_settings.FailFast)
@@ -340,22 +336,22 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
 
         internal void UpdateSettingsFromDiscovery(IList<IServiceInstance> instances, ConfigServerClientSettings settings)
         {
-            StringBuilder endpoints = new StringBuilder();
+            var endpoints = new StringBuilder();
             foreach (var instance in instances)
             {
                 var uri = instance.Uri.ToString();
                 var metaData = instance.Metadata;
                 if (metaData != null)
                 {
-                    if (metaData.TryGetValue("password", out string password))
+                    if (metaData.TryGetValue("password", out var password))
                     {
-                        metaData.TryGetValue("user", out string username);
-                        username = username ?? "user";
+                        metaData.TryGetValue("user", out var username);
+                        username ??= "user";
                         settings.Username = username;
                         settings.Password = password;
                     }
 
-                    if (metaData.TryGetValue("configPath", out string path))
+                    if (metaData.TryGetValue("configPath", out var path))
                     {
                         if (uri.EndsWith("/") && path.StartsWith("/"))
                         {
@@ -460,10 +456,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         protected internal async Task<ConfigEnvironment> RemoteLoadAsync(string[] requestUris, string label)
         {
             // Get client if not already set
-            if (_client == null)
-            {
-                _client = GetHttpClient(_settings);
-            }
+            _httpClient ??= GetHttpClient(_settings);
 
             Exception error = null;
             foreach (var requestUri in requestUris)
@@ -473,8 +466,8 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                 // Get a config server uri and username passwords to use
                 var trimUri = requestUri.Trim();
                 var serverUri = _settings.GetRawUri(trimUri);
-                string username = _settings.GetUserName(trimUri);
-                string password = _settings.GetPassword(trimUri);
+                var username = _settings.GetUserName(trimUri);
+                var password = _settings.GetPassword(trimUri);
 
                 // Make Config Server URI from settings
                 var path = GetConfigServerUri(serverUri, label);
@@ -483,40 +476,38 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                 var request = GetRequestMessage(path, username, password);
 
                 // If certificate validation is disabled, inject a callback to handle properly
-                SecurityProtocolType prevProtocols = (SecurityProtocolType)0;
-                HttpClientHelper.ConfigureCertificateValidation(_settings.ValidateCertificates, out prevProtocols, out RemoteCertificateValidationCallback prevValidator);
+                var prevProtocols = (SecurityProtocolType)0;
+                HttpClientHelper.ConfigureCertificateValidation(_settings.ValidateCertificates, out prevProtocols, out var prevValidator);
 
                 // Invoke config server
                 try
                 {
-                    using (HttpResponseMessage response = await _client.SendAsync(request).ConfigureAwait(false))
+                    using var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+
+                    // Log status
+                    var message = $"Config Server returned status: {response.StatusCode} invoking path: {requestUri}";
+                    _logger?.LogInformation(WebUtility.UrlEncode(message));
+
+                    if (response.StatusCode != HttpStatusCode.OK)
                     {
-                        // Log status
-                        var message = $"Config Server returned status: {response.StatusCode} invoking path: {requestUri}";
-                        _logger?.LogInformation(WebUtility.UrlEncode(message));
-
-                        if (response.StatusCode != HttpStatusCode.OK)
+                        if (response.StatusCode == HttpStatusCode.NotFound)
                         {
-                            if (response.StatusCode == HttpStatusCode.NotFound)
-                            {
-                                return null;
-                            }
-
-                            // Throw if status >= 400
-                            if (response.StatusCode >= HttpStatusCode.BadRequest)
-                            {
-                                // HttpClientErrorException
-                                throw new HttpRequestException(message);
-                            }
-                            else
-                            {
-                                return null;
-                            }
+                            return null;
                         }
 
-                        Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                        return Deserialize(stream);
+                        // Throw if status >= 400
+                        if (response.StatusCode >= HttpStatusCode.BadRequest)
+                        {
+                            // HttpClientErrorException
+                            throw new HttpRequestException(message);
+                        }
+                        else
+                        {
+                            return null;
+                        }
                     }
+
+                    return await response.Content.ReadFromJsonAsync<ConfigEnvironment>(SerializerOptions).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -553,48 +544,42 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         protected internal virtual async Task<ConfigEnvironment> RemoteLoadAsync(string requestUri)
         {
             // Get client if not already set
-            if (_client == null)
-            {
-                _client = GetHttpClient(_settings);
-            }
+            _httpClient ??= GetHttpClient(_settings);
 
             // Get the request message
             var request = GetRequestMessage(requestUri);
 
             // If certificate validation is disabled, inject a callback to handle properly
-            HttpClientHelper.ConfigureCertificateValidation(_settings.ValidateCertificates, out SecurityProtocolType prevProtocols, out RemoteCertificateValidationCallback prevValidator);
+            HttpClientHelper.ConfigureCertificateValidation(_settings.ValidateCertificates, out var prevProtocols, out var prevValidator);
 
             // Invoke config server
             try
             {
-                using (HttpResponseMessage response = await _client.SendAsync(request).ConfigureAwait(false))
+                using var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+                if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    if (response.StatusCode != HttpStatusCode.OK)
+                    if (response.StatusCode == HttpStatusCode.NotFound)
                     {
-                        if (response.StatusCode == HttpStatusCode.NotFound)
-                        {
-                            return null;
-                        }
-
-                        // Log status
-                        var message = $"Config Server returned status: {response.StatusCode} invoking path: {requestUri}";
-
-                        _logger?.LogInformation(WebUtility.UrlEncode(message));
-
-                        // Throw if status >= 400
-                        if (response.StatusCode >= HttpStatusCode.BadRequest)
-                        {
-                            throw new HttpRequestException(message);
-                        }
-                        else
-                        {
-                            return null;
-                        }
+                        return null;
                     }
 
-                    Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                    return Deserialize(stream);
+                    // Log status
+                    var message = $"Config Server returned status: {response.StatusCode} invoking path: {requestUri}";
+
+                    _logger?.LogInformation(WebUtility.UrlEncode(message));
+
+                    // Throw if status >= 400
+                    if (response.StatusCode >= HttpStatusCode.BadRequest)
+                    {
+                        throw new HttpRequestException(message);
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
+
+                return await response.Content.ReadFromJsonAsync<ConfigEnvironment>(SerializerOptions).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -606,16 +591,6 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
             {
                 HttpClientHelper.RestoreCertificateValidation(_settings.ValidateCertificates, prevProtocols, prevValidator);
             }
-        }
-
-        /// <summary>
-        /// Deserialize the response from the Configuration Server
-        /// </summary>
-        /// <param name="stream">the stream representing the response from the Configuration Server</param>
-        /// <returns>The ConfigEnvironment object representing the response from the server</returns>
-        protected internal virtual ConfigEnvironment Deserialize(Stream stream)
-        {
-            return SerializationHelper.Deserialize<ConfigEnvironment>(stream, _logger);
         }
 
         /// <summary>
@@ -685,12 +660,12 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                 return;
             }
 
-            foreach (KeyValuePair<string, object> kvp in source.Source)
+            foreach (var kvp in source.Source)
             {
                 try
                 {
-                    string key = ConvertKey(kvp.Key);
-                    string value = ConvertValue(kvp.Value);
+                    var key = ConvertKey(kvp.Key);
+                    var value = ConvertValue(kvp.Value);
                     data[key] = value;
                 }
                 catch (Exception e)
@@ -707,11 +682,11 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                 return key;
             }
 
-            string[] split = Split(key);
-            StringBuilder sb = new StringBuilder();
+            var split = Split(key);
+            var sb = new StringBuilder();
             foreach (var part in split)
             {
-                string keyPart = ConvertArrayKey(part);
+                var keyPart = ConvertArrayKey(part);
                 sb.Append(keyPart);
                 sb.Append(ConfigurationPath.KeyDelimiter);
             }
@@ -723,10 +698,10 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         {
             var result = new List<string>();
 
-            int segmentStart = 0;
-            for (int i = 0; i < source.Length; i++)
+            var segmentStart = 0;
+            for (var i = 0; i < source.Length; i++)
             {
-                bool readEscapeChar = false;
+                var readEscapeChar = false;
                 if (source[i] == ESCAPE_CHAR)
                 {
                     readEscapeChar = true;
@@ -759,7 +734,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         {
             return Regex.Replace(key, ArrayPattern, (match) =>
             {
-                string result = match.Value.Replace("[", ":").Replace("]", string.Empty);
+                var result = match.Value.Replace("[", ":").Replace("]", string.Empty);
                 return result;
             });
         }
@@ -782,10 +757,10 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
 
         protected internal virtual void RenewToken(string token)
         {
-            if (tokenRenewTimer == null)
+            if (_tokenRenewTimer == null)
             {
-                tokenRenewTimer = new Timer(
-                    this.RefreshVaultTokenAsync,
+                _tokenRenewTimer = new Timer(
+                    RefreshVaultTokenAsync,
                     null,
                     TimeSpan.FromMilliseconds(_settings.TokenRenewRate),
                     TimeSpan.FromMilliseconds(_settings.TokenRenewRate));
@@ -809,7 +784,9 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                 _settings.ClientId,
                 _settings.ClientSecret,
                 _settings.Timeout,
-                _settings.ValidateCertificates).GetAwaiter().GetResult();
+                _settings.ValidateCertificates,
+                _httpClient,
+                _logger).GetAwaiter().GetResult();
         }
 
         // fire and forget
@@ -827,25 +804,22 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
             // If certificate validation is disabled, inject a callback to handle properly
             HttpClientHelper.ConfigureCertificateValidation(
                 _settings.ValidateCertificates,
-                out SecurityProtocolType prevProtocols,
-                out RemoteCertificateValidationCallback prevValidator);
+                out var prevProtocols,
+                out var prevValidator);
 
-            HttpClient client = null;
             try
             {
-                client = GetHttpClient(Settings);
+                _httpClient ??= GetHttpClient(Settings);
 
                 var uri = GetVaultRenewUri();
                 var message = GetVaultRenewMessage(uri);
 
                 _logger?.LogInformation("Renewing Vault token {0} for {1} milliseconds at Uri {2}", obscuredToken, Settings.TokenTtl, uri);
 
-                using (HttpResponseMessage response = await client.SendAsync(message).ConfigureAwait(false))
+                using var response = await _httpClient.SendAsync(message).ConfigureAwait(false);
+                if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    if (response.StatusCode != HttpStatusCode.OK)
-                    {
-                        _logger?.LogWarning("Renewing Vault token {0} returned status: {1}", obscuredToken, response.StatusCode);
-                    }
+                    _logger?.LogWarning("Renewing Vault token {0} returned status: {1}", obscuredToken, response.StatusCode);
                 }
             }
             catch (Exception e)
@@ -854,7 +828,6 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
             }
             finally
             {
-                client.Dispose();
                 HttpClientHelper.RestoreCertificateValidation(_settings.ValidateCertificates, prevProtocols, prevValidator);
             }
         }
@@ -879,10 +852,10 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
                 request.Headers.Add(VAULT_TOKEN_HEADER, Settings.Token);
             }
 
-            int renewTtlSeconds = Settings.TokenTtl / 1000;
-            string json = "{\"increment\":" + renewTtlSeconds.ToString() + "}";
+            var renewTtlSeconds = Settings.TokenTtl / 1000;
+            var json = "{\"increment\":" + renewTtlSeconds.ToString() + "}";
 
-            StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
             request.Content = content;
             return request;
         }

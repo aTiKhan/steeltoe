@@ -1,29 +1,21 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
-using Steeltoe.Messaging.Rabbit.Attributes;
+using Microsoft.Extensions.DependencyInjection;
+using Steeltoe.Messaging.RabbitMQ.Attributes;
+using Steeltoe.Messaging.RabbitMQ.Listener;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Steeltoe.Messaging.Rabbit.Config
+namespace Steeltoe.Messaging.RabbitMQ.Config
 {
-    // TODO: Internal?
     public class RabbitListenerMetadata
     {
         internal static readonly Dictionary<Type, RabbitListenerMetadata> _typeCache = new Dictionary<Type, RabbitListenerMetadata>();
+        internal static readonly HashSet<string> _groups = new HashSet<string>();
 
         internal RabbitListenerMetadata(Type targetClass, List<ListenerMethod> methods, List<MethodInfo> multiMethods, List<RabbitListenerAttribute> classLevelListeners)
         {
@@ -48,7 +40,7 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
         internal Type TargetClass { get; }
 
-        internal static RabbitListenerMetadata BuildMetadata(Type targetClass)
+        internal static RabbitListenerMetadata BuildMetadata(IServiceCollection services, Type targetClass)
         {
             if (targetClass == null)
             {
@@ -61,7 +53,7 @@ namespace Steeltoe.Messaging.Rabbit.Config
             }
 
             var classLevelListeners = targetClass.GetCustomAttributes<RabbitListenerAttribute>().ToList();
-            Validate(classLevelListeners);
+            Validate(services, classLevelListeners);
             var methods = new List<ListenerMethod>();
             var multiMethods = new List<MethodInfo>();
             var reflectMethods = targetClass.GetMethods(BindingFlags.Public | BindingFlags.Instance);
@@ -70,7 +62,7 @@ namespace Steeltoe.Messaging.Rabbit.Config
                 var methodLevelListeners = m.GetCustomAttributes<RabbitListenerAttribute>().ToList();
                 if (methodLevelListeners.Count > 0)
                 {
-                    Validate(methodLevelListeners);
+                    Validate(services, methodLevelListeners);
                     methods.Add(new ListenerMethod(m, methodLevelListeners));
                 }
 
@@ -82,32 +74,33 @@ namespace Steeltoe.Messaging.Rabbit.Config
                         multiMethods.Add(m);
                     }
                 }
+            }
 
-                if (methods.Count == 0 && multiMethods.Count == 0)
-                {
-                    return null;
-                }
+            if (methods.Count == 0 && multiMethods.Count == 0)
+            {
+                return null;
             }
 
             return new RabbitListenerMetadata(targetClass, methods, multiMethods, classLevelListeners);
         }
 
-        private static void Validate(List<RabbitListenerAttribute> listenerAttributes)
+        private static void Validate(IServiceCollection services, List<RabbitListenerAttribute> listenerAttributes)
         {
-            // TODO:
-            // foreach (var listener in listenerAttributes)
-            // {
-            //    var queues = listener.Queues;
-            //    var queuesToDeclare = listener.QueuesToDeclare;
-            //    var bindings = listener.Bindings;
+            foreach (var listener in listenerAttributes)
+            {
+                var queues = listener.Queues;
+                var bindings = listener.Bindings;
+                if (bindings.Length > 0 && queues.Length > 0)
+                {
+                    throw new InvalidOperationException("RabbitListenerAttribute can have either 'Queues' or 'Bindings' set, but not both");
+                }
 
-            // if ((queues.Length > 0 && (queuesToDeclare.Length > 0 || bindings.Length > 0))
-            //        || (queuesToDeclare.Length > 0 && (queues.Length > 0 || bindings.Length > 0))
-            //        || (bindings.Length > 0 && (queues.Length > 0 || queuesToDeclare.Length > 0)))
-            //    {
-            //        throw new InvalidOperationException("RabbitListenerAttribute can have only one of 'Queues', 'QueuesToDeclare', or 'Bindings'");
-            //    }
-            // }
+                if (!string.IsNullOrEmpty(listener.Group) && !_groups.Contains(listener.Group))
+                {
+                    _groups.Add(listener.Group);
+                    services.AddSingleton<IMessageListenerContainerCollection>(new MessageListenerContainerCollection(listener.Group));
+                }
+            }
         }
 
         internal class ListenerMethod

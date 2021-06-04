@@ -1,16 +1,6 @@
-// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -21,6 +11,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Steeltoe.Security.Authentication.CloudFoundry.Test
@@ -35,7 +26,7 @@ namespace Steeltoe.Security.Authentication.CloudFoundry.Test
         }
 
         [Fact]
-        public async void CloudFoundryCertificateAuth_AcceptsSameSpace()
+        public async Task CloudFoundryCertificateAuth_AcceptsSameSpace()
         {
             // arrange
             var host = await GetHostBuilder().StartAsync();
@@ -48,7 +39,7 @@ namespace Steeltoe.Security.Authentication.CloudFoundry.Test
         }
 
         [Fact]
-        public async void CloudFoundryCertificateAuth_AcceptsSameOrg()
+        public async Task CloudFoundryCertificateAuth_AcceptsSameOrg()
         {
             // arrange
             var host = await GetHostBuilder().StartAsync();
@@ -61,7 +52,7 @@ namespace Steeltoe.Security.Authentication.CloudFoundry.Test
         }
 
         [Fact]
-        public async void CloudFoundryCertificateAuth_RejectsOrgMismatch()
+        public async Task CloudFoundryCertificateAuth_RejectsOrgMismatch()
         {
             // arrange
             var host = await GetHostBuilder().StartAsync();
@@ -74,7 +65,7 @@ namespace Steeltoe.Security.Authentication.CloudFoundry.Test
         }
 
         [Fact]
-        public async void CloudFoundryCertificateAuth_RejectsSpaceMismatch()
+        public async Task CloudFoundryCertificateAuth_RejectsSpaceMismatch()
         {
             // arrange
             var host = await GetHostBuilder().StartAsync();
@@ -87,7 +78,7 @@ namespace Steeltoe.Security.Authentication.CloudFoundry.Test
         }
 
         [Fact]
-        public async void AddCloudFoundryCertificateAuth_ForbiddenWithoutCert()
+        public async Task AddCloudFoundryCertificateAuth_ForbiddenWithoutCert()
         {
             // arrange
             var host = await GetHostBuilder().StartAsync();

@@ -1,19 +1,10 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Steeltoe.Management.Endpoint.Test;
+using Steeltoe.Management.Info;
 using System;
 using System.Collections.Generic;
 using Xunit;
@@ -23,10 +14,10 @@ namespace Steeltoe.Management.Endpoint.Info.Contributor.Test
     public class AppSettingsInfoContributorTest : BaseTest
     {
         [Fact]
-        public void ConstributeWithConfigNull()
+        public void ContributeWithConfigNull()
         {
             var contributor = new AppSettingsInfoContributor(null);
-            InfoBuilder builder = new InfoBuilder();
+            var builder = new InfoBuilder();
             contributor.Contribute(builder);
             var result = builder.Build();
             Assert.NotNull(result);
@@ -45,7 +36,7 @@ namespace Steeltoe.Management.Endpoint.Info.Contributor.Test
                 ["info:NET:type"] = "Core",
                 ["info:NET:version"] = "1.1.0"
             };
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
             var settings = new AppSettingsInfoContributor(config);
@@ -67,15 +58,15 @@ namespace Steeltoe.Management.Endpoint.Info.Contributor.Test
                 ["info:NET:ASPNET:type"] = "Core",
                 ["info:NET:ASPNET:version"] = "1.1.0"
             };
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
             var config = configurationBuilder.Build();
             var settings = new AppSettingsInfoContributor(config);
 
-            InfoBuilder builder = new InfoBuilder();
+            var builder = new InfoBuilder();
             settings.Contribute(builder);
 
-            Dictionary<string, object> info = builder.Build();
+            var info = builder.Build();
             Assert.NotNull(info);
             Assert.Equal(2, info.Count);
             Assert.True(info.ContainsKey("application"));

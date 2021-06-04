@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Metric;
 using Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer;
@@ -31,8 +21,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public static Func<long[], HystrixCommandCompletion, long[]> AppendEventToBucket { get; } = (initialCountArray, execution) =>
         {
-            ExecutionResult.EventCounts eventCounts = execution.Eventcounts;
-            foreach (HystrixEventType eventType in ALL_EVENT_TYPES)
+            var eventCounts = execution.Eventcounts;
+            foreach (var eventType in ALL_EVENT_TYPES)
             {
                 switch (eventType)
                 {
@@ -49,12 +39,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public static Func<long[], long[], long[]> BucketAggregator { get; } = (cumulativeEvents, bucketEventCounts) =>
         {
-            foreach (HystrixEventType eventType in ALL_EVENT_TYPES)
+            foreach (var eventType in ALL_EVENT_TYPES)
             {
                 switch (eventType)
                 {
                     case HystrixEventType.EXCEPTION_THROWN:
-                        foreach (HystrixEventType exceptionEventType in HystrixEventTypeHelper.ExceptionProducingEventTypes)
+                        foreach (var exceptionEventType in HystrixEventTypeHelper.ExceptionProducingEventTypes)
                         {
                             var ordinal1 = (int)eventType;
                             var ordinal2 = (int)exceptionEventType;
@@ -97,14 +87,14 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public static HystrixCommandMetrics GetInstance(IHystrixCommandKey key)
         {
-            Metrics.TryGetValue(key.Name, out HystrixCommandMetrics result);
+            Metrics.TryGetValue(key.Name, out var result);
             return result;
         }
 
         public static ICollection<HystrixCommandMetrics> GetInstances()
         {
-            List<HystrixCommandMetrics> commandMetrics = new List<HystrixCommandMetrics>();
-            foreach (HystrixCommandMetrics tpm in Metrics.Values)
+            var commandMetrics = new List<HystrixCommandMetrics>();
+            foreach (var tpm in Metrics.Values)
             {
                 commandMetrics.Add(tpm);
             }
@@ -114,7 +104,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         internal static void Reset()
         {
-            foreach (HystrixCommandMetrics metricsInstance in GetInstances())
+            foreach (var metricsInstance in GetInstances())
             {
                 metricsInstance.UnsubscribeAll();
             }
@@ -130,17 +120,17 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             Metrics.Clear();
         }
 
-        private readonly AtomicInteger concurrentExecutionCount = new AtomicInteger();
+        private readonly AtomicInteger _concurrentExecutionCount = new AtomicInteger();
 
-        private readonly RollingCommandEventCounterStream rollingCommandEventCounterStream;
-        private readonly CumulativeCommandEventCounterStream cumulativeCommandEventCounterStream;
-        private readonly RollingCommandLatencyDistributionStream rollingCommandLatencyDistributionStream;
-        private readonly RollingCommandUserLatencyDistributionStream rollingCommandUserLatencyDistributionStream;
-        private readonly RollingCommandMaxConcurrencyStream rollingCommandMaxConcurrencyStream;
+        private readonly RollingCommandEventCounterStream _rollingCommandEventCounterStream;
+        private readonly CumulativeCommandEventCounterStream _cumulativeCommandEventCounterStream;
+        private readonly RollingCommandLatencyDistributionStream _rollingCommandLatencyDistributionStream;
+        private readonly RollingCommandUserLatencyDistributionStream _rollingCommandUserLatencyDistributionStream;
+        private readonly RollingCommandMaxConcurrencyStream _rollingCommandMaxConcurrencyStream;
 
         private readonly object _syncLock = new object();
 
-        private HealthCountsStream healthCountsStream;
+        private HealthCountsStream _healthCountsStream;
 
         internal HystrixCommandMetrics(IHystrixCommandKey key, IHystrixCommandGroupKey commandGroup, IHystrixThreadPoolKey threadPoolKey, IHystrixCommandOptions properties, HystrixEventNotifier eventNotifier)
             : base(null)
@@ -150,13 +140,13 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             ThreadPoolKey = threadPoolKey;
             Properties = properties;
 
-            healthCountsStream = HealthCountsStream.GetInstance(key, properties);
-            rollingCommandEventCounterStream = RollingCommandEventCounterStream.GetInstance(key, properties);
-            cumulativeCommandEventCounterStream = CumulativeCommandEventCounterStream.GetInstance(key, properties);
+            _healthCountsStream = HealthCountsStream.GetInstance(key, properties);
+            _rollingCommandEventCounterStream = RollingCommandEventCounterStream.GetInstance(key, properties);
+            _cumulativeCommandEventCounterStream = CumulativeCommandEventCounterStream.GetInstance(key, properties);
 
-            rollingCommandLatencyDistributionStream = RollingCommandLatencyDistributionStream.GetInstance(key, properties);
-            rollingCommandUserLatencyDistributionStream = RollingCommandUserLatencyDistributionStream.GetInstance(key, properties);
-            rollingCommandMaxConcurrencyStream = RollingCommandMaxConcurrencyStream.GetInstance(key, properties);
+            _rollingCommandLatencyDistributionStream = RollingCommandLatencyDistributionStream.GetInstance(key, properties);
+            _rollingCommandUserLatencyDistributionStream = RollingCommandUserLatencyDistributionStream.GetInstance(key, properties);
+            _rollingCommandMaxConcurrencyStream = RollingCommandMaxConcurrencyStream.GetInstance(key, properties);
         }
 
         /* package */
@@ -164,9 +154,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix
         {
             lock (_syncLock)
             {
-                healthCountsStream.Unsubscribe();
+                _healthCountsStream.Unsubscribe();
                 HealthCountsStream.RemoveByKey(CommandKey);
-                healthCountsStream = HealthCountsStream.GetInstance(CommandKey, Properties);
+                _healthCountsStream = HealthCountsStream.GetInstance(CommandKey, Properties);
             }
         }
 
@@ -180,7 +170,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public long GetRollingCount(HystrixEventType eventType)
         {
-            return rollingCommandEventCounterStream.GetLatest(eventType);
+            return _rollingCommandEventCounterStream.GetLatest(eventType);
         }
 
         public override long GetRollingCount(HystrixRollingNumberEvent @event)
@@ -190,7 +180,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public long GetCumulativeCount(HystrixEventType eventType)
         {
-            return cumulativeCommandEventCounterStream.GetLatest(eventType);
+            return _cumulativeCommandEventCounterStream.GetLatest(eventType);
         }
 
         public override long GetCumulativeCount(HystrixRollingNumberEvent @event)
@@ -200,28 +190,28 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public int GetExecutionTimePercentile(double percentile)
         {
-            return rollingCommandLatencyDistributionStream.GetLatestPercentile(percentile);
+            return _rollingCommandLatencyDistributionStream.GetLatestPercentile(percentile);
         }
 
         public int ExecutionTimeMean
         {
-            get { return rollingCommandLatencyDistributionStream.LatestMean; }
+            get { return _rollingCommandLatencyDistributionStream.LatestMean; }
         }
 
         public int GetTotalTimePercentile(double percentile)
         {
-            return rollingCommandUserLatencyDistributionStream.GetLatestPercentile(percentile);
+            return _rollingCommandUserLatencyDistributionStream.GetLatestPercentile(percentile);
         }
 
-        public int TotalTimeMean => rollingCommandUserLatencyDistributionStream.LatestMean;
+        public int TotalTimeMean => _rollingCommandUserLatencyDistributionStream.LatestMean;
 
-        public long RollingMaxConcurrentExecutions => rollingCommandMaxConcurrencyStream.LatestRollingMax;
+        public long RollingMaxConcurrentExecutions => _rollingCommandMaxConcurrencyStream.LatestRollingMax;
 
-        public int CurrentConcurrentExecutionCount => concurrentExecutionCount.Value;
+        public int CurrentConcurrentExecutionCount => _concurrentExecutionCount.Value;
 
         internal void MarkCommandStart(IHystrixCommandKey commandKey, IHystrixThreadPoolKey threadPoolKey, ExecutionIsolationStrategy isolationStrategy)
         {
-            int currentCount = concurrentExecutionCount.IncrementAndGet();
+            var currentCount = _concurrentExecutionCount.IncrementAndGet();
             HystrixThreadEventStream.GetInstance().CommandExecutionStarted(commandKey, threadPoolKey, isolationStrategy, currentCount);
         }
 
@@ -230,20 +220,20 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             HystrixThreadEventStream.GetInstance().ExecutionDone(executionResult, commandKey, threadPoolKey);
             if (executionStarted)
             {
-                concurrentExecutionCount.DecrementAndGet();
+                _concurrentExecutionCount.DecrementAndGet();
             }
         }
 
-        public HealthCounts Healthcounts => healthCountsStream.Latest;
+        public HealthCounts Healthcounts => _healthCountsStream.Latest;
 
         private void UnsubscribeAll()
         {
-            healthCountsStream.Unsubscribe();
-            rollingCommandEventCounterStream.Unsubscribe();
-            cumulativeCommandEventCounterStream.Unsubscribe();
-            rollingCommandLatencyDistributionStream.Unsubscribe();
-            rollingCommandUserLatencyDistributionStream.Unsubscribe();
-            rollingCommandMaxConcurrencyStream.Unsubscribe();
+            _healthCountsStream.Unsubscribe();
+            _rollingCommandEventCounterStream.Unsubscribe();
+            _cumulativeCommandEventCounterStream.Unsubscribe();
+            _rollingCommandLatencyDistributionStream.Unsubscribe();
+            _rollingCommandUserLatencyDistributionStream.Unsubscribe();
+            _rollingCommandMaxConcurrencyStream.Unsubscribe();
         }
     }
 }

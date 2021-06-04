@@ -1,39 +1,47 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.Common.Services;
 using System.Collections.Generic;
 
-namespace Steeltoe.Messaging.Rabbit.Config
+namespace Steeltoe.Messaging.RabbitMQ.Config
 {
-    public class Binding : AbstractDeclarable, IServiceNameAware
+    public class Binding : AbstractDeclarable, IServiceNameAware, IBinding
     {
+        internal static IBinding Create(string bindingName, string destination, DestinationType destinationType, string exchange, string routingKey, Dictionary<string, object> arguments)
+        {
+            if (destinationType == DestinationType.EXCHANGE)
+            {
+                return new ExchangeBinding(bindingName, destination, exchange, routingKey, arguments);
+            }
+
+            return new QueueBinding(bindingName, destination, exchange, routingKey, arguments);
+        }
+
         public enum DestinationType
         {
             QUEUE,
             EXCHANGE
         }
 
-        public Binding(string name, string destination, DestinationType destinationType, string exchange, string routingKey, Dictionary<string, object> arguments)
+        public Binding(string bindingName)
+            : base(null)
+        {
+            BindingName = ServiceName = bindingName;
+        }
+
+        public Binding(string bindingName, string destination, DestinationType destinationType, string exchange, string routingKey, Dictionary<string, object> arguments)
             : base(arguments)
         {
-            Name = name;
+            BindingName = ServiceName = bindingName;
             Destination = destination;
             Type = destinationType;
             Exchange = exchange;
             RoutingKey = routingKey;
         }
+
+        public string ServiceName { get; set; }
 
         public string Destination { get; set; }
 
@@ -45,11 +53,11 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
         public bool IsDestinationQueue => Type == DestinationType.QUEUE;
 
-        public string Name { get; set; }
+        public string BindingName { get; set; }
 
         public override string ToString()
         {
-            return "Binding [destination=" + Destination + ", exchange=" + Exchange + ", routingKey="
+            return "Binding [bindingName=" + BindingName + ", destination=" + Destination + ", exchange=" + Exchange + ", routingKey="
                         + RoutingKey + ", arguments=" + Arguments + "]";
         }
     }

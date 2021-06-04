@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.Common;
 using System;
@@ -24,9 +14,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric
     {
         private static readonly ConcurrentDictionary<string, HystrixCommandStartStream> Streams = new ConcurrentDictionary<string, HystrixCommandStartStream>();
 
-        private readonly IHystrixCommandKey commandKey;
-        private readonly ISubject<HystrixCommandExecutionStarted, HystrixCommandExecutionStarted> writeOnlySubject;
-        private readonly IObservable<HystrixCommandExecutionStarted> readOnlyStream;
+        private readonly IHystrixCommandKey _commandKey;
+        private readonly ISubject<HystrixCommandExecutionStarted, HystrixCommandExecutionStarted> _writeOnlySubject;
+        private readonly IObservable<HystrixCommandExecutionStarted> _readOnlyStream;
 
         public static HystrixCommandStartStream GetInstance(IHystrixCommandKey commandKey)
         {
@@ -35,9 +25,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric
 
         internal HystrixCommandStartStream(IHystrixCommandKey commandKey)
         {
-            this.commandKey = commandKey;
-            this.writeOnlySubject = Subject.Synchronize<HystrixCommandExecutionStarted, HystrixCommandExecutionStarted>(new Subject<HystrixCommandExecutionStarted>());
-            this.readOnlyStream = writeOnlySubject.AsObservable();
+            _commandKey = commandKey;
+            _writeOnlySubject = Subject.Synchronize<HystrixCommandExecutionStarted, HystrixCommandExecutionStarted>(new Subject<HystrixCommandExecutionStarted>());
+            _readOnlyStream = _writeOnlySubject.AsObservable();
         }
 
         public static void Reset()
@@ -47,17 +37,17 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric
 
         public void Write(HystrixCommandExecutionStarted @event)
         {
-            writeOnlySubject.OnNext(@event);
+            _writeOnlySubject.OnNext(@event);
         }
 
         public IObservable<HystrixCommandExecutionStarted> Observe()
         {
-            return readOnlyStream;
+            return _readOnlyStream;
         }
 
         public override string ToString()
         {
-            return "HystrixCommandStartStream(" + commandKey.Name + ")";
+            return "HystrixCommandStartStream(" + _commandKey.Name + ")";
         }
     }
 }

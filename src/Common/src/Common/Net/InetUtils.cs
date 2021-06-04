@@ -1,20 +1,9 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -34,7 +23,7 @@ namespace Steeltoe.Common.Net
             _logger = logger;
         }
 
-        public HostInfo FindFirstNonLoopbackHostInfo()
+        public virtual HostInfo FindFirstNonLoopbackHostInfo()
         {
             var address = FindFirstNonLoopbackAddress();
             if (address != null)
@@ -42,9 +31,11 @@ namespace Steeltoe.Common.Net
                 return ConvertAddress(address);
             }
 
-            HostInfo hostInfo = new HostInfo();
-            hostInfo.Hostname = _options.DefaultHostname;
-            hostInfo.IpAddress = _options.DefaultIpAddress;
+            var hostInfo = new HostInfo
+            {
+                Hostname = _options.DefaultHostname,
+                IpAddress = _options.DefaultIpAddress
+            };
             return hostInfo;
         }
 
@@ -53,9 +44,9 @@ namespace Steeltoe.Common.Net
             IPAddress result = null;
             try
             {
-                int lowest = int.MaxValue;
+                var lowest = int.MaxValue;
                 var ifaces = NetworkInterface.GetAllNetworkInterfaces();
-                for (int i = 0; i < ifaces.Length; i++)
+                for (var i = 0; i < ifaces.Length; i++)
                 {
                     var ifc = ifaces[i];
 
@@ -119,24 +110,24 @@ namespace Steeltoe.Common.Net
         {
             if (_options.UseOnlySiteLocalInterfaces)
             {
-                bool siteLocalAddress = IsSiteLocalAddress(address);
+                var siteLocalAddress = IsSiteLocalAddress(address);
                 if (!siteLocalAddress)
                 {
-                    _logger?.LogTrace("Ignoring address: {address} ", address.ToString());
+                    _logger?.LogTrace("Ignoring address: {address} [UseOnlySiteLocalInterfaces=true, this address is not]", address.ToString());
                 }
 
                 return siteLocalAddress;
             }
 
-            IEnumerable<string> preferredNetworks = _options.GetPreferredNetworks();
+            var preferredNetworks = _options.GetPreferredNetworks();
             if (!preferredNetworks.Any())
             {
                 return true;
             }
 
-            foreach (string regex in preferredNetworks)
+            foreach (var regex in preferredNetworks)
             {
-                string hostAddress = address.ToString();
+                var hostAddress = address.ToString();
                 var matcher = new Regex(regex);
                 if (matcher.IsMatch(hostAddress) || hostAddress.StartsWith(regex))
                 {
@@ -155,7 +146,7 @@ namespace Steeltoe.Common.Net
                 return false;
             }
 
-            foreach (string regex in _options.GetIgnoredInterfaces())
+            foreach (var regex in _options.GetIgnoredInterfaces())
             {
                 var matcher = new Regex(regex);
                 if (matcher.IsMatch(interfaceName))
@@ -170,20 +161,29 @@ namespace Steeltoe.Common.Net
 
         internal HostInfo ConvertAddress(IPAddress address)
         {
-            HostInfo hostInfo = new HostInfo();
-            string hostname;
-            try
+            var hostInfo = new HostInfo();
+            if (!_options.SkipReverseDnsLookup)
             {
-                var hostEntry = Dns.GetHostEntry(address);
-                hostname = hostEntry.HostName;
+                string hostname;
+                try
+                {
+                    // warning: this might take a few seconds...
+                    var hostEntry = Dns.GetHostEntry(address);
+                    hostname = hostEntry.HostName;
+                }
+                catch (Exception e)
+                {
+                    _logger?.LogInformation(e, "Cannot determine local hostname");
+                    hostname = "localhost";
+                }
+
+                hostInfo.Hostname = hostname;
             }
-            catch (Exception e)
+            else
             {
-                _logger?.LogInformation(e, "Cannot determine local hostname");
-                hostname = "localhost";
+                hostInfo.Hostname = _options.DefaultHostname;
             }
 
-            hostInfo.Hostname = hostname;
             hostInfo.IpAddress = address.ToString();
             return hostInfo;
         }
@@ -244,7 +244,7 @@ namespace Steeltoe.Common.Net
 
         internal IPAddress GetHostAddress()
         {
-            string hostName = GetHostName();
+            var hostName = GetHostName();
             if (!string.IsNullOrEmpty(hostName))
             {
                 return ResolveHostAddress(hostName);
@@ -255,7 +255,7 @@ namespace Steeltoe.Common.Net
 
         internal bool IsSiteLocalAddress(IPAddress address)
         {
-            string addr = address.ToString();
+            var addr = address.ToString();
             return addr.StartsWith("10.") ||
                 addr.StartsWith("172.16.") ||
                 addr.StartsWith("192.168.");

@@ -1,49 +1,38 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using Steeltoe.Common.Contexts;
-using Steeltoe.Messaging.Rabbit.Core;
-using Steeltoe.Messaging.Rabbit.Data;
+using Steeltoe.Messaging.RabbitMQ.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using RC=RabbitMQ.Client;
 
-namespace Steeltoe.Messaging.Rabbit.Listener
+namespace Steeltoe.Messaging.RabbitMQ.Listener
 {
     public class DirectReplyToMessageListenerContainer : DirectMessageListenerContainer
     {
+        internal readonly ConcurrentDictionary<RC.IModel, SimpleConsumer> _inUseConsumerChannels = new ConcurrentDictionary<RC.IModel, SimpleConsumer>();
+        internal readonly ConcurrentDictionary<SimpleConsumer, long> _whenUsed = new ConcurrentDictionary<SimpleConsumer, long>();
         private const int DEFAULT_IDLE = 60000;
-        private readonly ConcurrentDictionary<IModel, SimpleConsumer> _inUseConsumerChannels = new ConcurrentDictionary<IModel, SimpleConsumer>();
-        private readonly ConcurrentDictionary<SimpleConsumer, long> _whenUsed = new ConcurrentDictionary<SimpleConsumer, long>();
         private int _consumerCount;
 
-        public DirectReplyToMessageListenerContainer(string name = null, ILogger logger = null)
-            : this(null, null, name, logger)
+        public DirectReplyToMessageListenerContainer(string name = null, ILoggerFactory loggerFactory = null)
+            : this(null, null, name, loggerFactory)
         {
         }
 
-        public DirectReplyToMessageListenerContainer(IApplicationContext applicationContext, string name = null, ILogger logger = null)
-            : this(applicationContext, null, name, logger)
+        public DirectReplyToMessageListenerContainer(IApplicationContext applicationContext, string name = null, ILoggerFactory loggerFactory = null)
+            : this(applicationContext, null, name, loggerFactory)
         {
         }
 
-        public DirectReplyToMessageListenerContainer(IApplicationContext applicationContext, Connection.IConnectionFactory connectionFactory, string name = null, ILogger logger = null)
-            : base(applicationContext, connectionFactory, name, logger)
+        public DirectReplyToMessageListenerContainer(IApplicationContext applicationContext, Connection.IConnectionFactory connectionFactory, string name = null, ILoggerFactory loggerFactory = null)
+            : base(applicationContext, connectionFactory, name, loggerFactory)
         {
-            SetQueueNames(Address.AMQ_RABBITMQ_REPLY_TO);
+            base.SetQueueNames(Address.AMQ_RABBITMQ_REPLY_TO);
             AcknowledgeMode = AcknowledgeMode.NONE;
             base.ConsumersPerQueue = 0;
             IdleEventInterval = DEFAULT_IDLE;
@@ -158,6 +147,11 @@ namespace Steeltoe.Messaging.Rabbit.Listener
             }
         }
 
+        internal void SetChannelAwareMessageListener(IChannelAwareMessageListener listener)
+        {
+            base.MessageListener = listener;
+        }
+
         protected override void DoStart()
         {
             if (!IsRunning)
@@ -186,7 +180,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener
 
                 if (reduce > 0)
                 {
-                    _logger?.LogDebug("Reducing idle consumes by " + reduce);
+                    _logger?.LogDebug("Reducing idle consumes by {reduce}", reduce);
                     _consumerCount = (int)Math.Max(0, _consumerCount - reduce);
                     base.ConsumersPerQueue = _consumerCount;
                 }
@@ -214,13 +208,13 @@ namespace Steeltoe.Messaging.Rabbit.Listener
 
         public class ChannelHolder
         {
-            public ChannelHolder(IModel channel, int consumerEpoch)
+            public ChannelHolder(RC.IModel channel, int consumerEpoch)
             {
                 Channel = channel;
                 ConsumerEpoch = consumerEpoch;
             }
 
-            public IModel Channel { get; }
+            public RC.IModel Channel { get; }
 
             public int ConsumerEpoch { get; }
 
@@ -255,7 +249,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener
                 }
             }
 
-            public void OnMessage(Message message, IModel channel)
+            public void OnMessage(IMessage message, RC.IModel channel)
             {
                 if (_listener is IChannelAwareMessageListener chanAwareListener)
                 {
@@ -281,12 +275,12 @@ namespace Steeltoe.Messaging.Rabbit.Listener
                 }
             }
 
-            public void OnMessage(Message message)
+            public void OnMessage(IMessage message)
             {
                 throw new InvalidOperationException("Should never be called for a ChannelAwareMessageListener");
             }
 
-            public void OnMessageBatch(List<Message> messages, IModel channel)
+            public void OnMessageBatch(List<IMessage> messages, RC.IModel channel)
             {
                 if (_listener is IChannelAwareMessageListener chanAwareListener)
                 {
@@ -312,7 +306,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener
                 }
             }
 
-            public void OnMessageBatch(List<Message> messages)
+            public void OnMessageBatch(List<IMessage> messages)
             {
                 throw new InvalidOperationException("Should never be called for a ChannelAwareMessageListener");
             }

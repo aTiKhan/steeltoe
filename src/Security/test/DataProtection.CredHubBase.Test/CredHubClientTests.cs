@@ -1,24 +1,14 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
-using Newtonsoft.Json.Linq;
 using RichardSzalay.MockHttp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -26,11 +16,11 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
 {
     public class CredHubClientTests
     {
-        private Uri tokenUri = new Uri("http://uaa-server/oauth/token");
-        private string credHubBase = "http://credhubServer/api/";
+        private readonly Uri tokenUri = new Uri("http://uaa-server/oauth/token");
+        private readonly string credHubBase = "http://credhubServer/api/";
 
         [Fact]
-        public async void CreateAsync_RequestsToken_Once()
+        public async Task CreateAsync_RequestsToken_Once()
         {
             // arrange
             MockedRequest authRequest = null;
@@ -44,7 +34,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void WriteAsync_Sets_Values()
+        public async Task WriteAsync_Sets_Values()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -67,10 +57,10 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void WriteAsync_Sets_Json()
+        public async Task WriteAsync_Sets_Json()
         {
             // arrange
-            var jsonObject = JObject.Parse("{'key': 123,'key_list': ['val1','val2'],'is_true': true}");
+            var jsonObject = JsonSerializer.Deserialize<JsonElement>(@"{""key"": 123,""key_list"": [""val1"",""val2""],""is_true"": true}");
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
             var mockRequest = mockHttpMessageHandler
                 .Expect(HttpMethod.Put, credHubBase + "/v1/data")
@@ -91,7 +81,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void WriteAsync_Sets_Password()
+        public async Task WriteAsync_Sets_Password()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -114,7 +104,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void WriteAsyncUserWithPermissions_Sets_UserWithPermissions()
+        public async Task WriteAsyncUserWithPermissions_Sets_UserWithPermissions()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -141,7 +131,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void WriteAsync_Sets_RootCertificate()
+        public async Task WriteAsync_Sets_RootCertificate()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -168,7 +158,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void WriteAsync_Sets_NonRootCertificate()
+        public async Task WriteAsync_Sets_NonRootCertificate()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -196,7 +186,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void WriteAsync_Sets_RSA()
+        public async Task WriteAsync_Sets_RSA()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -222,7 +212,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void WriteAsync_Sets_SSH()
+        public async Task WriteAsync_Sets_SSH()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -248,14 +238,14 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GetByIdAsync_Gets()
+        public async Task GetByIdAsync_Gets()
         {
             // arrange
             var credId = Guid.Parse("f82cc4a6-4490-4ed7-92c9-5115006bd691");
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
             var mockRequest = mockHttpMessageHandler
-                .Expect(HttpMethod.Get, $"{credHubBase}/v1/data/{credId}")
-                .Respond("application/json", "{\"type\":\"ssh\",\"version_created_at\":\"2017-11-20T17:37:57Z\",\"id\":\"f82cc4a6-4490-4ed7-92c9-5115006bd691\",\"name\":\"/example-ssh\",\"value\":{\"public_key\":\"ssh-rsa FakePublicKeyText\",\"private_key\":\"-----BEGIN RSA PRIVATE KEY-----\nFakePrivateKeyText\n-----END RSA PRIVATE KEY-----\n\",\"public_key_fingerprint\":\"mkiqcOCEUhYsp/0Uu5ZsJlLkKt74/lV4Yz/FKslHxR8\"}}");
+                .Expect(HttpMethod.Get, $"{credHubBase}v1/data/{credId}")
+                .Respond("application/json", "{\"type\":\"ssh\",\"version_created_at\":\"2017-11-20T17:37:57Z\",\"id\":\"f82cc4a6-4490-4ed7-92c9-5115006bd691\",\"name\":\"/example-ssh\",\"value\":{\"public_key\":\"ssh-rsa FakePublicKeyText\",\"private_key\":\"-----BEGIN RSA PRIVATE KEY-----\\nFakePrivateKeyText\\n-----END RSA PRIVATE KEY-----\\n\",\"public_key_fingerprint\":\"mkiqcOCEUhYsp/0Uu5ZsJlLkKt74/lV4Yz/FKslHxR8\"}}");
             var client = await InitializeClientAsync(mockHttpMessageHandler);
 
             // act
@@ -273,7 +263,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GetByNameAsync_Gets()
+        public async Task GetByNameAsync_Gets()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -302,7 +292,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GetByNameAsync_Throws_WithoutName()
+        public async Task GetByNameAsync_Throws_WithoutName()
         {
             // arrange
             var client = new CredHubClient();
@@ -312,10 +302,10 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GetByNameWithHistoryAsync_Gets()
+        public async Task GetByNameWithHistoryAsync_Gets()
         {
             // arrange
-            int revisionCount = 3;
+            var revisionCount = 3;
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
             var mockRequest = mockHttpMessageHandler
                 .Expect(HttpMethod.Get, $"{credHubBase}/v1/data?name=/example&versions={revisionCount}")
@@ -340,7 +330,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GenerateAsync_Creates_Password()
+        public async Task GenerateAsync_Creates_Password()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -365,7 +355,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GenerateAsync_Creates_PasswordWithPermissions()
+        public async Task GenerateAsync_Creates_PasswordWithPermissions()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -390,7 +380,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GenerateAsync_Creates_User()
+        public async Task GenerateAsync_Creates_User()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -417,7 +407,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GenerateAsync_Creates_Certificate()
+        public async Task GenerateAsync_Creates_Certificate()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -445,7 +435,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GenerateAsync_Creates_RSA()
+        public async Task GenerateAsync_Creates_RSA()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -471,7 +461,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GenerateAsync_Creates_SSH()
+        public async Task GenerateAsync_Creates_SSH()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -498,7 +488,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void RegenerateAsync_Regenerates_Password()
+        public async Task RegenerateAsync_Regenerates_Password()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -522,7 +512,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void RegenerateAsync_Regenerates_RSA()
+        public async Task RegenerateAsync_Regenerates_RSA()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -547,7 +537,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void RegenerateAsync_Throws_WithoutName()
+        public async Task RegenerateAsync_Throws_WithoutName()
         {
             // arrange
             var client = new CredHubClient();
@@ -557,7 +547,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void BulkRegenerateAsync_Regenerates_Certificates()
+        public async Task BulkRegenerateAsync_Regenerates_Certificates()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -578,7 +568,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void BulkRegenerateAsync_Throws_WithoutCA()
+        public async Task BulkRegenerateAsync_Throws_WithoutCA()
         {
             // arrange
             var client = new CredHubClient();
@@ -588,7 +578,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void DeleteByNameAsync_ReturnsTrue_WhenCredDeleted()
+        public async Task DeleteByNameAsync_ReturnsTrue_WhenCredDeleted()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -605,7 +595,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void DeleteByNameAsync_ReturnsTrue_WhenCredNotFound()
+        public async Task DeleteByNameAsync_ReturnsTrue_WhenCredNotFound()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -622,7 +612,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void DeleteByNameAsync_Throws_WithoutName()
+        public async Task DeleteByNameAsync_Throws_WithoutName()
         {
             // arrange
             var client = new CredHubClient();
@@ -632,7 +622,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void FindByNameAsync_Returns_Credentials_WithQuery()
+        public async Task FindByNameAsync_Returns_Credentials_WithQuery()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -654,7 +644,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void FindByNameAsync_Throws_WithoutQuery()
+        public async Task FindByNameAsync_Throws_WithoutQuery()
         {
             // arrange
             var client = new CredHubClient();
@@ -664,7 +654,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void FindByPathAsync_Returns_Credentials_WithQuery()
+        public async Task FindByPathAsync_Returns_Credentials_WithQuery()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -686,7 +676,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void FindByPathAsync_Throws_WithoutQuery()
+        public async Task FindByPathAsync_Throws_WithoutQuery()
         {
             // arrange
             var client = new CredHubClient();
@@ -696,7 +686,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GetPermissionsAsync_Throws_WithoutName()
+        public async Task GetPermissionsAsync_Throws_WithoutName()
         {
             // arrange
             var client = new CredHubClient();
@@ -706,7 +696,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void GetPermissionsAsync_ReturnsPermissionedActors()
+        public async Task GetPermissionsAsync_ReturnsPermissionedActors()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -733,7 +723,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void AddPermissionsAsync_Throws_WithoutName()
+        public async Task AddPermissionsAsync_Throws_WithoutName()
         {
             // arrange
             var client = new CredHubClient();
@@ -743,7 +733,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void AddPermissionsAsync_Throws_WithNoPermissions()
+        public async Task AddPermissionsAsync_Throws_WithNoPermissions()
         {
             // arrange
             var client = new CredHubClient();
@@ -753,7 +743,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void AddPermissionsAsync_Throws_WithNullPermissions()
+        public async Task AddPermissionsAsync_Throws_WithNullPermissions()
         {
             // arrange
             var client = new CredHubClient();
@@ -763,7 +753,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void AddPermissionsAsync_AddsAndReturnsPermissions()
+        public async Task AddPermissionsAsync_AddsAndReturnsPermissions()
         {
             // arrange
             var credentialName = "/generated-password";
@@ -797,7 +787,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void DeletePermissionAsync_Throws_WithoutActor()
+        public async Task DeletePermissionAsync_Throws_WithoutActor()
         {
             // arrange
             var client = new CredHubClient();
@@ -807,7 +797,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void DeletePermissionAsync_Throws_WithoutPermissionToDelete()
+        public async Task DeletePermissionAsync_Throws_WithoutPermissionToDelete()
         {
             // arrange
             var client = new CredHubClient();
@@ -817,7 +807,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void DeletePermissionAsync_ReturnsTrue_WhenDeleted()
+        public async Task DeletePermissionAsync_ReturnsTrue_WhenDeleted()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -840,7 +830,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void DeletePermissionAsync_ReturnsTrue_WhenNotFound()
+        public async Task DeletePermissionAsync_ReturnsTrue_WhenNotFound()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();
@@ -863,7 +853,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void InterpolateServiceDataAsync_Throws_WithoutServiceData()
+        public async Task InterpolateServiceDataAsync_Throws_WithoutServiceData()
         {
             // arrange
             var client = new CredHubClient();
@@ -873,7 +863,7 @@ namespace Steeltoe.Security.DataProtection.CredHub.Test
         }
 
         [Fact]
-        public async void InterpolateServiceDataAsync_CallsEndpoint_ReturnsInterpolatedString()
+        public async Task InterpolateServiceDataAsync_CallsEndpoint_ReturnsInterpolatedString()
         {
             // arrange
             var mockHttpMessageHandler = InitializedHandlerWithLogin();

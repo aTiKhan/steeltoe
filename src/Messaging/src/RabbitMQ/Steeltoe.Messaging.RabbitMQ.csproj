@@ -2,8 +2,8 @@
   
   <PropertyGroup>
     <Description>Steeltoe Messaging RabbitMQ</Description>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RootNamespace>Steeltoe.Messaging.Rabbit</RootNamespace>
+    <TargetFrameworks>netcoreapp3.1;net5.0;</TargetFrameworks>
+    <RootNamespace>Steeltoe.Messaging.RabbitMQ</RootNamespace>
     <AssemblyName>Steeltoe.Messaging.RabbitMQ</AssemblyName>
     <PackageId>Steeltoe.Messaging.RabbitMQ</PackageId>
     <PackageTags>Messaging, ASPNET Core, Spring, Spring Cloud</PackageTags>
@@ -13,21 +13,17 @@
   <Import Project="..\..\..\..\versions.props" />
   <Import Project="..\..\..\..\sharedproject.props" />
 
-  <ItemGroup Condition="'$(CI_BUILD)' == ''">
-    <ProjectReference Include="..\Base\Steeltoe.Messaging.Base.csproj" />
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Common\src\Common.Expression\Steeltoe.Common.Expression.csproj" />
     <ProjectReference Include="..\..\..\Common\src\Common.RetryPolly\Steeltoe.Common.RetryPolly.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(CI_BUILD)' == 'True'">
-    <PackageReference Include="Steeltoe.Messaging.Base" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Common.RetryPolly" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
+    <ProjectReference Include="..\..\..\Connectors\src\ConnectorBase\Steeltoe.Connector.ConnectorBase.csproj" />
+    <ProjectReference Include="..\MessagingBase\Steeltoe.Messaging.MessagingBase.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="$(JsonNetVersion)" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.0.0-rc1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(AspNetCoreVersion)" />
+    <PackageReference Include="RabbitMQ.Client" Version="5.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(ExtensionsVersion)" />
   </ItemGroup>
-
   
 </Project>

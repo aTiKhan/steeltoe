@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Strategy.Concurrency;
 using Steeltoe.Common;
@@ -51,20 +41,20 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             return Caches.GetOrAddEx(rcKey, (k) => new HystrixRequestCache(rcKey));
         }
 
-        private readonly RequestCacheKey rcKey;
+        private readonly RequestCacheKey _rcKey;
 
         private HystrixRequestCache(RequestCacheKey rcKey)
         {
-            this.rcKey = rcKey;
+            _rcKey = rcKey;
         }
 
         public T Get<T>(string cacheKey)
         {
-            ValueCacheKey key = GetRequestCacheKey(cacheKey);
-            object result = null;
+            var key = GetRequestCacheKey(cacheKey);
             if (key != null)
             {
                 var cacheInstance = RequestVariableForCache.Value;
+                object result;
                 /* look for the stored value */
                 if (cacheInstance.TryGetValue(key, out result))
                 {
@@ -72,31 +62,30 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                 }
             }
 
-            return default(T);
+            return default;
         }
 
         public void Clear(string cacheKey)
         {
-            ValueCacheKey key = GetRequestCacheKey(cacheKey);
+            var key = GetRequestCacheKey(cacheKey);
             if (key != null)
             {
                 /* remove this cache key */
                 var cacheInstance = RequestVariableForCache.Value;
-                cacheInstance.TryRemove(key, out object removed);
+                cacheInstance.TryRemove(key, out _);
             }
         }
 
         internal T PutIfAbsent<T>(string cacheKey, T f)
         {
-            ValueCacheKey key = GetRequestCacheKey(cacheKey);
-            object result = null;
+            var key = GetRequestCacheKey(cacheKey);
             if (key != null)
             {
                 var cacheInstance = RequestVariableForCache.Value;
-                result = cacheInstance.GetOrAdd(key, f);
+                var result = cacheInstance.GetOrAdd(key, f);
                 if (f.Equals(result))
                 {
-                    return default(T);
+                    return default;
                 }
                 else
                 {
@@ -104,7 +93,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                 }
             }
 
-            return default(T);
+            return default;
         }
 
         private ValueCacheKey GetRequestCacheKey(string cacheKey)
@@ -112,7 +101,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             if (cacheKey != null)
             {
                 /* create the cache key we will use to retrieve/store that include the type key prefix */
-                return new ValueCacheKey(rcKey, cacheKey);
+                return new ValueCacheKey(_rcKey, cacheKey);
             }
 
             return null;
@@ -120,21 +109,21 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         private class ValueCacheKey
         {
-            private readonly RequestCacheKey rvKey;
-            private readonly string valueCacheKey;
+            private readonly RequestCacheKey _rvKey;
+            private readonly string _valueCacheKey;
 
             public ValueCacheKey(RequestCacheKey rvKey, string valueCacheKey)
             {
-                this.rvKey = rvKey;
-                this.valueCacheKey = valueCacheKey;
+                _rvKey = rvKey;
+                _valueCacheKey = valueCacheKey;
             }
 
             public override int GetHashCode()
             {
-                int prime = 31;
-                int result = 1;
-                result = (prime * result) + ((rvKey == null) ? 0 : rvKey.GetHashCode());
-                result = (prime * result) + ((valueCacheKey == null) ? 0 : valueCacheKey.GetHashCode());
+                var prime = 31;
+                var result = 1;
+                result = (prime * result) + ((_rvKey == null) ? 0 : _rvKey.GetHashCode());
+                result = (prime * result) + ((_valueCacheKey == null) ? 0 : _valueCacheKey.GetHashCode());
                 return result;
             }
 
@@ -155,27 +144,27 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                     return false;
                 }
 
-                ValueCacheKey other = (ValueCacheKey)obj;
-                if (rvKey == null)
+                var other = (ValueCacheKey)obj;
+                if (_rvKey == null)
                 {
-                    if (other.rvKey != null)
+                    if (other._rvKey != null)
                     {
                         return false;
                     }
                 }
-                else if (!rvKey.Equals(other.rvKey))
+                else if (!_rvKey.Equals(other._rvKey))
                 {
                     return false;
                 }
 
-                if (valueCacheKey == null)
+                if (_valueCacheKey == null)
                 {
-                    if (other.valueCacheKey != null)
+                    if (other._valueCacheKey != null)
                     {
                         return false;
                     }
                 }
-                else if (!valueCacheKey.Equals(other.valueCacheKey))
+                else if (!_valueCacheKey.Equals(other._valueCacheKey))
                 {
                     return false;
                 }
@@ -186,41 +175,41 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         private class RequestCacheKey
         {
-            private readonly short type; // used to differentiate between Collapser/Command if key is same between them
-            private readonly string key;
+            private readonly short _type; // used to differentiate between Collapser/Command if key is same between them
+            private readonly string _key;
 
             public RequestCacheKey(IHystrixCommandKey commandKey)
             {
-                type = 1;
+                _type = 1;
                 if (commandKey == null)
                 {
-                    this.key = null;
+                    _key = null;
                 }
                 else
                 {
-                    this.key = commandKey.Name;
+                    _key = commandKey.Name;
                 }
             }
 
             public RequestCacheKey(IHystrixCollapserKey collapserKey)
             {
-                type = 2;
+                _type = 2;
                 if (collapserKey == null)
                 {
-                    this.key = null;
+                    _key = null;
                 }
                 else
                 {
-                    this.key = collapserKey.Name;
+                    _key = collapserKey.Name;
                 }
             }
 
             public override int GetHashCode()
             {
-                int prime = 31;
-                int result = 1;
-                result = (prime * result) + ((key == null) ? 0 : key.GetHashCode());
-                result = (prime * result) + type;
+                var prime = 31;
+                var result = 1;
+                result = (prime * result) + ((_key == null) ? 0 : _key.GetHashCode());
+                result = (prime * result) + _type;
                 return result;
             }
 
@@ -241,20 +230,20 @@ namespace Steeltoe.CircuitBreaker.Hystrix
                     return false;
                 }
 
-                RequestCacheKey other = (RequestCacheKey)obj;
-                if (type != other.type)
+                var other = (RequestCacheKey)obj;
+                if (_type != other._type)
                 {
                     return false;
                 }
 
-                if (key == null)
+                if (_key == null)
                 {
-                    if (other.key != null)
+                    if (other._key != null)
                     {
                         return false;
                     }
                 }
-                else if (!key.Equals(other.key))
+                else if (!_key.Equals(other._key))
                 {
                     return false;
                 }

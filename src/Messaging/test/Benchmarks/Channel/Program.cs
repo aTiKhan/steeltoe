@@ -19,7 +19,7 @@ public class Program
         var handler = new CounterHandler();
 
         channel.Subscribe(handler);
-        var message = new GenericMessage("test");
+        var message = Message.Create("test");
         for (var i = 0; i < 10_000_000; i++)
         {
             channel.Send(message);
@@ -33,7 +33,7 @@ public class Program
         var handler = new CounterHandler();
 
         channel.Subscribe(handler);
-        var message = new GenericMessage("test");
+        var message = Message.Create("test");
         for (var i = 0; i < 10_000_000; i++)
         {
             await channel.Writer.WriteAsync(message);
@@ -43,6 +43,8 @@ public class Program
     private class CounterHandler : IMessageHandler
     {
         public int Count;
+
+        public string ServiceName { get; set; } = nameof(CounterHandler);
 
         public void HandleMessage(IMessage message)
         {

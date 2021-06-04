@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Exceptions;
 using Steeltoe.Common.Util;
@@ -25,7 +15,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 {
     public class HystrixCommandMetricsTest : HystrixTestBase, IDisposable
     {
-        private ITestOutputHelper output;
+        private readonly ITestOutputHelper output;
 
         public HystrixCommandMetricsTest(ITestOutputHelper output)
             : base()
@@ -34,13 +24,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestGetErrorPercentage()
         {
-            string key = "cmd-metrics-A";
+            var key = "cmd-metrics-A";
 
             HystrixCommand<bool> cmd1 = new SuccessCommand(key, 0);
-            HystrixCommandMetrics metrics = cmd1._metrics;
+            var metrics = cmd1._metrics;
 
             Assert.True(WaitForHealthCountToUpdate(key, 1000), "Health count stream took to long");
 
@@ -97,13 +86,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestBadRequestsDoNotAffectErrorPercentage()
         {
-            string key = "cmd-metrics-B";
+            var key = "cmd-metrics-B";
 
             HystrixCommand<bool> cmd1 = new SuccessCommand(key, 0);
-            HystrixCommandMetrics metrics = cmd1._metrics;
+            var metrics = cmd1._metrics;
 
             Assert.True(WaitForHealthCountToUpdate(key, 1000), "Health count stream took to long");
             cmd1.Execute();
@@ -157,12 +145,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         [Fact]
         public void TestCurrentConcurrentExecutionCount()
         {
-            string key = "cmd-metrics-C";
+            var key = "cmd-metrics-C";
 
             HystrixCommandMetrics metrics = null;
-            List<IObservable<bool>> cmdResults = new List<IObservable<bool>>();
+            var cmdResults = new List<IObservable<bool>>();
 
-            for (int i = 0; i < 8; i++)
+            for (var i = 0; i < 8; i++)
             {
                 HystrixCommand<bool> cmd = new SuccessCommand(key, 900);
                 if (metrics == null)
@@ -170,7 +158,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                     metrics = cmd._metrics;
                 }
 
-                IObservable<bool> eagerObservable = cmd.Observe();
+                var eagerObservable = cmd.Observe();
                 cmdResults.Add(eagerObservable);
             }
 
@@ -186,7 +174,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             output.WriteLine("ReqLog: " + HystrixRequestLog.CurrentRequestLog.GetExecutedCommandsAsString());
             Assert.Equal(8, metrics.CurrentConcurrentExecutionCount);
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             Observable.Merge(cmdResults).Subscribe(
                 (n) =>
                 {
@@ -209,9 +197,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         private class Command : HystrixCommand<bool>
         {
-            private bool shouldFail;
-            private bool shouldFailWithBadRequest;
-            private int latencyToAdd;
+            private readonly bool shouldFail;
+            private readonly bool shouldFailWithBadRequest;
+            private readonly int latencyToAdd;
 
             public Command(string commandKey, bool shouldFail, bool shouldFailWithBadRequest, int latencyToAdd)
                 : base(GetUnitTestSettings(commandKey))
@@ -219,7 +207,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 this.shouldFail = shouldFail;
                 this.shouldFailWithBadRequest = shouldFailWithBadRequest;
                 this.latencyToAdd = latencyToAdd;
-                this.IsFallbackUserDefined = true;
+                IsFallbackUserDefined = true;
             }
 
             protected override bool Run()
@@ -246,7 +234,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
             private static HystrixCommandOptions GetUnitTestSettings(string commandKey)
             {
-                HystrixCommandOptions opts = HystrixCommandOptionsTest.GetUnitTestOptions();
+                var opts = HystrixCommandOptionsTest.GetUnitTestOptions();
                 opts.GroupKey = HystrixCommandGroupKeyDefault.AsKey("Command");
                 opts.CommandKey = HystrixCommandKeyDefault.AsKey(commandKey);
                 opts.ExecutionTimeoutInMilliseconds = 1000;

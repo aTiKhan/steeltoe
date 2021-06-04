@@ -1,27 +1,18 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Steeltoe.Management.OpenTelemetry.Stats;
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
 namespace Steeltoe.Management.Endpoint.Metrics.Observer
 {
+    [Obsolete("Use EventListeners instead")]
     public class CLRRuntimeObserver : MetricsObserver
     {
         internal const string OBSERVER_NAME = "CLRRuntimeObserver";
@@ -31,25 +22,25 @@ namespace Steeltoe.Management.Endpoint.Metrics.Observer
         internal const string THREADS_EVENT = "Steeltoe.ClrMetrics.Threads";
 
         private const string GENERATION_TAGVALUE_NAME = "gen";
-        private readonly MeasureMetric<long> activeThreads;
-        private readonly MeasureMetric<long> availThreads;
-        private readonly string generationKey = "generation";
-        private readonly MeasureMetric<long> collectionCount;
-        private readonly MeasureMetric<long> memoryUsed;
+        private readonly MeasureMetric<long> _activeThreads;
+        private readonly MeasureMetric<long> _availThreads;
+        private readonly string _generationKey = "generation";
+        private readonly MeasureMetric<long> _collectionCount;
+        private readonly MeasureMetric<long> _memoryUsed;
 
-        private readonly IEnumerable<KeyValuePair<string, string>> memoryLabels = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("area", "heap") };
-        private readonly IEnumerable<KeyValuePair<string, string>> threadPoolWorkerLabels = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("kind", "worker") };
-        private readonly IEnumerable<KeyValuePair<string, string>> threadPoolComPortLabels = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("kind", "completionPort") };
+        private readonly IEnumerable<KeyValuePair<string, string>> _memoryLabels = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("area", "heap") };
+        private readonly IEnumerable<KeyValuePair<string, string>> _threadPoolWorkerLabels = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("kind", "worker") };
+        private readonly IEnumerable<KeyValuePair<string, string>> _threadPoolComPortLabels = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>("kind", "completionPort") };
 
-        private CLRRuntimeSource.HeapMetrics previous = default(CLRRuntimeSource.HeapMetrics);
+        private CLRRuntimeSource.HeapMetrics _previous = default;
 
-        public CLRRuntimeObserver(IMetricsOptions options, IStats stats, ILogger<CLRRuntimeObserver> logger)
+        public CLRRuntimeObserver(IMetricsObserverOptions options, IStats stats, ILogger<CLRRuntimeObserver> logger)
             : base(OBSERVER_NAME, DIAGNOSTIC_NAME, options, stats, logger)
         {
-            memoryUsed = Meter.CreateInt64Measure("clr.memory.used");
-            collectionCount = Meter.CreateInt64Measure("clr.gc.collections");
-            activeThreads = Meter.CreateInt64Measure("clr.threadpool.active");
-            availThreads = Meter.CreateInt64Measure("clr.threadpool.avail");
+            _memoryUsed = Meter.CreateInt64Measure("clr.memory.used");
+            _collectionCount = Meter.CreateInt64Measure("clr.gc.collections");
+            _activeThreads = Meter.CreateInt64Measure("clr.threadpool.active");
+            _availThreads = Meter.CreateInt64Measure("clr.threadpool.avail");
 
             // TODO: Pending View API
             // memoryTagValues = Tagger.CurrentBuilder.Put(memoryAreaKey, heapArea).Build();
@@ -85,20 +76,20 @@ namespace Steeltoe.Management.Endpoint.Metrics.Observer
         protected internal void HandleHeapEvent(CLRRuntimeSource.HeapMetrics metrics)
         {
             var context = default(SpanContext);
-            memoryUsed.Record(context, metrics.TotalMemory, memoryLabels);
+            _memoryUsed.Record(context, metrics.TotalMemory, _memoryLabels);
             for (int i = 0; i < metrics.CollectionCounts.Count; i++)
             {
                 var count = metrics.CollectionCounts[i];
-                if (previous.CollectionCounts != null && i < previous.CollectionCounts.Count && previous.CollectionCounts[i] <= count)
+                if (_previous.CollectionCounts != null && i < _previous.CollectionCounts.Count && _previous.CollectionCounts[i] <= count)
                 {
-                    count -= previous.CollectionCounts[i];
+                    count -= _previous.CollectionCounts[i];
                 }
 
-                var genKeylabelSet = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>(generationKey, GENERATION_TAGVALUE_NAME + i.ToString()) };
-                collectionCount.Record(context, count, genKeylabelSet);
+                var genKeylabelSet = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>(_generationKey, GENERATION_TAGVALUE_NAME + i.ToString()) };
+                _collectionCount.Record(context, count, genKeylabelSet);
             }
 
-            previous = metrics;
+            _previous = metrics;
         }
 
         protected internal void HandleThreadsEvent(CLRRuntimeSource.ThreadMetrics metrics)
@@ -106,11 +97,11 @@ namespace Steeltoe.Management.Endpoint.Metrics.Observer
             var activeWorkers = metrics.MaxThreadPoolWorkers - metrics.AvailableThreadPoolWorkers;
             var activeCompPort = metrics.MaxThreadCompletionPort - metrics.AvailableThreadCompletionPort;
 
-            activeThreads.Record(default(SpanContext), activeWorkers, threadPoolWorkerLabels);
-            availThreads.Record(default(SpanContext), metrics.AvailableThreadPoolWorkers, threadPoolWorkerLabels);
+            _activeThreads.Record(default(SpanContext), activeWorkers, _threadPoolWorkerLabels);
+            _availThreads.Record(default(SpanContext), metrics.AvailableThreadPoolWorkers, _threadPoolWorkerLabels);
 
-            activeThreads.Record(default(SpanContext), activeCompPort, threadPoolComPortLabels);
-            availThreads.Record(default(SpanContext), metrics.AvailableThreadCompletionPort, threadPoolComPortLabels);
+            _activeThreads.Record(default(SpanContext), activeCompPort, _threadPoolComPortLabels);
+            _availThreads.Record(default(SpanContext), metrics.AvailableThreadCompletionPort, _threadPoolComPortLabels);
         }
 
         // TODO: Pending View API

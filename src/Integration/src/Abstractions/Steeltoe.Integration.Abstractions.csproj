@@ -1,24 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
-    <Description>Steeltoe Integration Abstractions</Description>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Description>
+      Steeltoe Integration Abstractions
+      **PLEASE NOTE** This package is experimental and is not production-ready.
+    </Description>
+    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
     <RootNamespace>Steeltoe.Integration</RootNamespace>
-    <AssemblyName>Steeltoe.Integration.Abstractions</AssemblyName>
-    <PackageId>Steeltoe.Integration.Abstractions</PackageId>
-    <PackageTags>Integration, ASPNET Core, Spring, Spring Cloud</PackageTags>
+    <PackageTags>Integration, NET Core, Spring, Spring Cloud</PackageTags>
   </PropertyGroup>
   
   <Import Project="..\..\..\..\versions.props" />
   <Import Project="..\..\..\..\sharedproject.props" />
 
 
-  <ItemGroup Condition="'$(CI_BUILD)' == ''">
-    <ProjectReference Include="..\..\..\Messaging\src\Base\Steeltoe.Messaging.Base.csproj" />
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Messaging\src\MessagingBase\Steeltoe.Messaging.MessagingBase.csproj" />
   </ItemGroup>
-  
-  <ItemGroup Condition="'$(CI_BUILD)' == 'True'">
-    <PackageReference Include="Steeltoe.Messaging.Base" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-  </ItemGroup>
-  
 </Project>

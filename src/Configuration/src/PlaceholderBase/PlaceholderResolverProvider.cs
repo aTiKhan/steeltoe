@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -30,7 +20,6 @@ namespace Steeltoe.Extensions.Configuration.Placeholder
     {
         internal IList<IConfigurationProvider> _providers = new List<IConfigurationProvider>();
         internal ILogger<PlaceholderResolverProvider> _logger;
-        private IList<string> _resolvedKeys = new List<string>();
 
         /// <summary>
         /// Gets the configuration this placeholder resolver wraps
@@ -77,10 +66,7 @@ namespace Steeltoe.Extensions.Configuration.Placeholder
             get { return _providers; }
         }
 
-        public IList<string> ResolvedKeys
-        {
-            get { return _resolvedKeys; }
-        }
+        public IList<string> ResolvedKeys { get; } = new List<string>();
 
         /// <summary>
         /// Tries to get a configuration value for the specified key. If the value is a placeholder
@@ -95,9 +81,9 @@ namespace Steeltoe.Extensions.Configuration.Placeholder
             var originalValue = Configuration[key];
             value = PropertyPlaceholderHelper.ResolvePlaceholders(originalValue, Configuration);
 
-            if (value != originalValue && !_resolvedKeys.Contains(key))
+            if (value != originalValue && !ResolvedKeys.Contains(key))
             {
-                _resolvedKeys.Add(key);
+                ResolvedKeys.Add(key);
             }
 
             return !string.IsNullOrEmpty(value);
@@ -138,8 +124,7 @@ namespace Steeltoe.Extensions.Configuration.Placeholder
             else
             {
                 // Reload called
-                var asRoot = Configuration as IConfigurationRoot;
-                if (asRoot != null)
+                if (Configuration is IConfigurationRoot asRoot)
                 {
                     asRoot.Reload();
                 }

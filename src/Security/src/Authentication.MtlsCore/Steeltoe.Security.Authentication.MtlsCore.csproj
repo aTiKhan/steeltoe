@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;net5.0;</TargetFrameworks>
     <RootNamespace>Steeltoe.Security.Authentication.Mtls</RootNamespace>
     <Description>ASP.NET Core middleware that enables an application to support certificate authentication.</Description>
     <PackageTags>aspnetcore;authentication;security;x509;certificate;mtls</PackageTags>
@@ -16,10 +16,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Certificate" Version="$(AspNetCoreVersion)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(CI_BUILD)' == ''">
+  <ItemGroup>
     <ProjectReference Include="..\..\..\Common\src\Common.Security\Steeltoe.Common.Security.csproj" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(CI_BUILD)' == 'True'">
-    <PackageReference Include="Steeltoe.Common.Security" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
   </ItemGroup>
 </Project>

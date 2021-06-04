@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Test;
 using System;
@@ -26,7 +16,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
     {
         private class LatchedObserver : ObserverBase<HystrixCommandCompletion>
         {
-            private CountdownEvent latch;
+            private readonly CountdownEvent latch;
 
             public LatchedObserver(CountdownEvent latch)
             {
@@ -51,7 +41,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         private static readonly IHystrixCommandKey CommandKey = HystrixCommandKeyDefault.AsKey("COMMAND");
         private static readonly IHystrixThreadPoolKey ThreadPoolKey = HystrixThreadPoolKeyDefault.AsKey("ThreadPool");
         private readonly HystrixCommandCompletionStream commandStream = new HystrixCommandCompletionStream(CommandKey);
-        private ITestOutputHelper output;
+        private readonly ITestOutputHelper output;
 
         public HystrixCommandCompletionStreamTest(ITestOutputHelper output)
             : base()
@@ -62,7 +52,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Fact]
         public void TestNoEvents()
         {
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             IObserver<HystrixCommandCompletion> subscriber = new LatchedObserver(latch);
 
             commandStream.Observe().Take(1).Subscribe(subscriber);
@@ -74,13 +64,13 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Fact]
         public void TestSingleWriteSingleSubscriber()
         {
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             IObserver<HystrixCommandCompletion> subscriber = new LatchedObserver(latch);
 
             commandStream.Observe().Take(1).Subscribe(subscriber);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.SUCCESS).SetExecutedInThread();
-            HystrixCommandCompletion @event = HystrixCommandCompletion.From(result, CommandKey, ThreadPoolKey);
+            var result = ExecutionResult.From(HystrixEventType.SUCCESS).SetExecutedInThread();
+            var @event = HystrixCommandCompletion.From(result, CommandKey, ThreadPoolKey);
             commandStream.Write(@event);
 
             Assert.True(latch.Wait(TimeSpan.FromMilliseconds(1000)));
@@ -89,17 +79,17 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Test
         [Fact]
         public void TestSingleWriteMultipleSubscribers()
         {
-            CountdownEvent latch1 = new CountdownEvent(1);
+            var latch1 = new CountdownEvent(1);
             IObserver<HystrixCommandCompletion> subscriber1 = new LatchedObserver(latch1);
 
-            CountdownEvent latch2 = new CountdownEvent(1);
+            var latch2 = new CountdownEvent(1);
             IObserver<HystrixCommandCompletion> subscriber2 = new LatchedObserver(latch2);
 
             commandStream.Observe().Take(1).Subscribe(subscriber1);
             commandStream.Observe().Take(1).Subscribe(subscriber2);
 
-            ExecutionResult result = ExecutionResult.From(HystrixEventType.SUCCESS).SetExecutedInThread();
-            HystrixCommandCompletion @event = HystrixCommandCompletion.From(result, CommandKey, ThreadPoolKey);
+            var result = ExecutionResult.From(HystrixEventType.SUCCESS).SetExecutedInThread();
+            var @event = HystrixCommandCompletion.From(result, CommandKey, ThreadPoolKey);
             commandStream.Write(@event);
 
             Assert.True(latch1.Wait(TimeSpan.FromMilliseconds(1000)));

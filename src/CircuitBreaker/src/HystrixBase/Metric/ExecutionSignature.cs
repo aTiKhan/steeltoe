@@ -1,36 +1,21 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 namespace Steeltoe.CircuitBreaker.Hystrix.Metric
 {
     public class ExecutionSignature
     {
-        private readonly string commandName;
-        private readonly ExecutionResult.EventCounts eventCounts;
-        private readonly string cacheKey;
-        private readonly int cachedCount;
-        private readonly IHystrixCollapserKey collapserKey;
-        private readonly int collapserBatchSize;
+        private readonly string _cacheKey;
 
         private ExecutionSignature(IHystrixCommandKey commandKey, ExecutionResult.EventCounts eventCounts, string cacheKey, int cachedCount, IHystrixCollapserKey collapserKey, int collapserBatchSize)
         {
-            this.commandName = commandKey.Name;
-            this.eventCounts = eventCounts;
-            this.cacheKey = cacheKey;
-            this.cachedCount = cachedCount;
-            this.collapserKey = collapserKey;
-            this.collapserBatchSize = collapserBatchSize;
+            CommandName = commandKey.Name;
+            Eventcounts = eventCounts;
+            _cacheKey = cacheKey;
+            CachedCount = cachedCount;
+            CollapserKey = collapserKey;
+            CollapserBatchSize = collapserBatchSize;
         }
 
         public static ExecutionSignature From(IHystrixInvokableInfo execution)
@@ -55,52 +40,37 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric
                 return false;
             }
 
-            ExecutionSignature that = (ExecutionSignature)o;
+            var that = (ExecutionSignature)o;
 
-            if (!commandName.Equals(that.commandName))
+            if (!CommandName.Equals(that.CommandName))
             {
                 return false;
             }
 
-            if (!eventCounts.Equals(that.eventCounts))
+            if (!Eventcounts.Equals(that.Eventcounts))
             {
                 return false;
             }
 
-            return !(cacheKey != null ? !cacheKey.Equals(that.cacheKey) : that.cacheKey != null);
+            return !(_cacheKey != null ? !_cacheKey.Equals(that._cacheKey) : that._cacheKey != null);
         }
 
         public override int GetHashCode()
         {
-            int result = commandName.GetHashCode();
-            result = (31 * result) + eventCounts.GetHashCode();
-            result = (31 * result) + (cacheKey != null ? cacheKey.GetHashCode() : 0);
+            var result = CommandName.GetHashCode();
+            result = (31 * result) + Eventcounts.GetHashCode();
+            result = (31 * result) + (_cacheKey != null ? _cacheKey.GetHashCode() : 0);
             return result;
         }
 
-        public string CommandName
-        {
-            get { return commandName; }
-        }
+        public string CommandName { get; }
 
-        public ExecutionResult.EventCounts Eventcounts
-        {
-            get { return eventCounts; }
-        }
+        public ExecutionResult.EventCounts Eventcounts { get; }
 
-        public int CachedCount
-        {
-            get { return cachedCount; }
-        }
+        public int CachedCount { get; }
 
-        public IHystrixCollapserKey CollapserKey
-        {
-            get { return collapserKey; }
-        }
+        public IHystrixCollapserKey CollapserKey { get; }
 
-        public int CollapserBatchSize
-        {
-            get { return collapserBatchSize; }
-        }
+        public int CollapserBatchSize { get; }
     }
 }

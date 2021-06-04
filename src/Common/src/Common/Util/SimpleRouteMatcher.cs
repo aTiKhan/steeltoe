@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -19,8 +9,6 @@ namespace Steeltoe.Common.Util
 {
     public class SimpleRouteMatcher : IRouteMatcher
     {
-        private readonly IPathMatcher pathMatcher;
-
         public SimpleRouteMatcher(IPathMatcher pathMatcher)
         {
             if (pathMatcher == null)
@@ -28,13 +16,10 @@ namespace Steeltoe.Common.Util
                 throw new ArgumentNullException(nameof(pathMatcher));
             }
 
-            this.pathMatcher = pathMatcher;
+            this.PathMatcher = pathMatcher;
         }
 
-        public IPathMatcher PathMatcher
-        {
-            get { return pathMatcher; }
-        }
+        public IPathMatcher PathMatcher { get; }
 
         public IRoute ParseRoute(string route)
         {
@@ -43,17 +28,17 @@ namespace Steeltoe.Common.Util
 
         public bool IsPattern(string route)
         {
-            return pathMatcher.IsPattern(route);
+            return PathMatcher.IsPattern(route);
         }
 
         public string Combine(string pattern1, string pattern2)
         {
-            return pathMatcher.Combine(pattern1, pattern2);
+            return PathMatcher.Combine(pattern1, pattern2);
         }
 
         public bool Match(string pattern, IRoute route)
         {
-            return pathMatcher.Match(pattern, route.Value);
+            return PathMatcher.Match(pattern, route.Value);
         }
 
         public IDictionary<string, string> MatchAndExtract(string pattern, IRoute route)
@@ -63,27 +48,22 @@ namespace Steeltoe.Common.Util
                 return null;
             }
 
-            return pathMatcher.ExtractUriTemplateVariables(pattern, route.Value);
+            return PathMatcher.ExtractUriTemplateVariables(pattern, route.Value);
         }
 
         public IComparer<string> GetPatternComparer(IRoute route)
         {
-            return pathMatcher.GetPatternComparer(route.Value);
+            return PathMatcher.GetPatternComparer(route.Value);
         }
 
         private class DefaultRoute : IRoute
         {
-            private readonly string path;
-
             public DefaultRoute(string path)
             {
-                this.path = path;
+                this.Value = path;
             }
 
-            public string Value
-            {
-                get { return path; }
-            }
+            public string Value { get; }
         }
     }
 }

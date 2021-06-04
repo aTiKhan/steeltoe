@@ -1,16 +1,6 @@
-// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
@@ -20,10 +10,8 @@ using Microsoft.Extensions.Options;
 using Steeltoe.Common.Http;
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Security;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -121,13 +109,13 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
         {
             _logger?.LogDebug("CreateTicketAsync()");
 
-            HttpRequestMessage request = GetTokenInfoRequestMessage(tokens);
-            HttpClient client = GetHttpClient();
+            var request = GetTokenInfoRequestMessage(tokens);
+            var client = GetHttpClient();
 
             HttpClientHelper.ConfigureCertificateValidation(
                 Options.ValidateCertificates,
-                out SecurityProtocolType prevProtocols,
-                out RemoteCertificateValidationCallback prevValidator);
+                out var prevProtocols,
+                out var prevValidator);
 
             HttpResponseMessage response = null;
             try
@@ -191,7 +179,7 @@ namespace Steeltoe.Security.Authentication.CloudFoundry
 
         private static void AddQueryString(IDictionary<string, string> queryStrings, AuthenticationProperties properties, string name, string defaultValue = null)
         {
-            if (!properties.Items.TryGetValue(name, out string value))
+            if (!properties.Items.TryGetValue(name, out var value))
             {
                 value = defaultValue;
             }

@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -19,12 +9,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Steeltoe.Common;
 using Steeltoe.Extensions.Logging;
+using Steeltoe.Management.Endpoint.CloudFoundry;
+using Steeltoe.Management.Endpoint.Hypermedia;
 using Steeltoe.Management.Endpoint.Test;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Steeltoe.Management.Endpoint.Mappings.Test
@@ -38,40 +31,31 @@ namespace Steeltoe.Management.Endpoint.Mappings.Test
             ["Logging:LogLevel:Pivotal"] = "Information",
             ["Logging:LogLevel:Steeltoe"] = "Information",
             ["management:endpoints:enabled"] = "true",
-            ["management:endpoints:path"] = "/cloudfoundryapplication"
         };
 
         [Fact]
-        public void IsMappingsRequest_ReturnsExpected()
+        public void RoutesByPathAndVerb()
         {
-            var opts = new MappingsEndpointOptions();
-            var mopts = TestHelper.GetManagementOptions(opts);
-
-            var configurationBuilder = new ConfigurationBuilder();
-            configurationBuilder.AddInMemoryCollection(AppSettings);
-            var config = configurationBuilder.Build();
-            var host = HostingHelpers.GetHostingEnvironment();
-            var middle = new MappingsEndpointMiddleware(null, opts, mopts);
-
-            var context = CreateRequest("GET", "/cloudfoundryapplication/mappings");
-            Assert.True(middle.IsMappingsRequest(context));
-            var context2 = CreateRequest("PUT", "/cloudfoundryapplication/mappings");
-            Assert.False(middle.IsMappingsRequest(context2));
-            var context3 = CreateRequest("GET", "/cloudfoundryapplication/badpath");
-            Assert.False(middle.IsMappingsRequest(context3));
+            var options = new MappingsEndpointOptions();
+            Assert.True(options.ExactMatch);
+            Assert.Equal("/actuator/mappings", options.GetContextPath(new ActuatorManagementOptions()));
+            Assert.Equal("/cloudfoundryapplication/mappings", options.GetContextPath(new CloudFoundryManagementOptions()));
+            Assert.Null(options.AllowedVerbs);
         }
 
         [Fact]
-        public async void HandleMappingsRequestAsync_MVCNotUsed_NoRoutes_ReturnsExpected()
+        public async Task HandleMappingsRequestAsync_MVCNotUsed_NoRoutes_ReturnsExpected()
         {
             var opts = new MappingsEndpointOptions();
-            var mopts = TestHelper.GetManagementOptions(opts);
+            var mopts = new CloudFoundryManagementOptions();
+            mopts.EndpointOptions.Add(opts);
 
             var configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(AppSettings);
             var config = configurationBuilder.Build();
             var host = HostingHelpers.GetHostingEnvironment();
-            var middle = new MappingsEndpointMiddleware(null, opts, mopts);
+            var ep = new MappingsEndpoint(opts);
+            var middle = new MappingsEndpointMiddleware(null, opts, mopts, ep);
 
             var context = CreateRequest("GET", "/cloudfoundryapplication/mappings");
             await middle.HandleMappingsRequestAsync(context);
@@ -83,7 +67,7 @@ namespace Steeltoe.Management.Endpoint.Mappings.Test
         }
 
         [Fact]
-        public async void MappingsActuator_ReturnsExpectedData()
+        public async Task MappingsActuator_ReturnsExpectedData()
         {
             var builder = new WebHostBuilder()
             .UseStartup<Startup>()
@@ -93,15 +77,13 @@ namespace Steeltoe.Management.Endpoint.Mappings.Test
                 loggingBuilder.AddConfiguration(webhostContext.Configuration);
                 loggingBuilder.AddDynamicConsole();
             });
-            using (var server = new TestServer(builder))
-            {
-                var client = server.CreateClient();
-                var result = await client.GetAsync("http://localhost/cloudfoundryapplication/mappings");
-                Assert.Equal(HttpStatusCode.OK, result.StatusCode);
-                var json = await result.Content.ReadAsStringAsync();
-                var expected = "{\"contexts\":{\"application\":{\"mappings\":{\"dispatcherServlets\":{\"Steeltoe.Management.EndpointCore.Mappings.Test.HomeController\":[{\"handler\":\"Steeltoe.Management.EndpointCore.Mappings.Test.Person Index()\",\"predicate\":\"{[/Home/Index],methods=[GET],produces=[text/plain || application/json || text/json]}\"}]}}}}}";
-                Assert.Equal(expected, json);
-            }
+            using var server = new TestServer(builder);
+            var client = server.CreateClient();
+            var result = await client.GetAsync("http://localhost/cloudfoundryapplication/mappings");
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            var json = await result.Content.ReadAsStringAsync();
+            var expected = "{\"contexts\":{\"application\":{\"mappings\":{\"dispatcherServlets\":{\"Steeltoe.Management.Endpoint.Mappings.Test.HomeController\":[{\"handler\":\"Steeltoe.Management.Endpoint.Mappings.Test.Person Index()\",\"predicate\":\"{[/Home/Index],methods=[GET],produces=[text/plain || application/json || text/json]}\"}]}}}}}";
+            Assert.Equal(expected, json);
         }
 
         private HttpContext CreateRequest(string method, string path)

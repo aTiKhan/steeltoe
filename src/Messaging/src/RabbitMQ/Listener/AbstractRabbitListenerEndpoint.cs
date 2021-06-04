@@ -1,46 +1,59 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using Steeltoe.Common.Contexts;
-using Steeltoe.Messaging.Rabbit.Batch;
-using Steeltoe.Messaging.Rabbit.Config;
-using Steeltoe.Messaging.Rabbit.Core;
-using Steeltoe.Messaging.Rabbit.Expressions;
-using Steeltoe.Messaging.Rabbit.Listener.Adapters;
-using Steeltoe.Messaging.Rabbit.Support.Converter;
+using Steeltoe.Common.Expression.Internal;
+using Steeltoe.Common.Expression.Internal.Contexts;
+using Steeltoe.Messaging.Converter;
+using Steeltoe.Messaging.RabbitMQ.Batch;
+using Steeltoe.Messaging.RabbitMQ.Config;
+using Steeltoe.Messaging.RabbitMQ.Core;
+using Steeltoe.Messaging.RabbitMQ.Listener.Adapters;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Steeltoe.Messaging.Rabbit.Listener
+namespace Steeltoe.Messaging.RabbitMQ.Listener
 {
     public abstract class AbstractRabbitListenerEndpoint : IRabbitListenerEndpoint
     {
         protected readonly ILogger _logger;
+        protected readonly ILoggerFactory _loggerFactory;
+        private IApplicationContext _applicationContext;
 
-        protected AbstractRabbitListenerEndpoint(IApplicationContext applicationContext, ILogger logger = null)
+        protected AbstractRabbitListenerEndpoint(IApplicationContext applicationContext, ILoggerFactory loggerFactory = null)
         {
             ApplicationContext = applicationContext;
-            _logger = logger;
+            _loggerFactory = loggerFactory;
+            _logger = loggerFactory?.CreateLogger(this.GetType());
+            if (applicationContext != null)
+            {
+                Resolver = applicationContext.ServiceExpressionResolver;
+                ExpressionContext = new ServiceExpressionContext(applicationContext);
+                ServiceResolver = new ServiceFactoryResolver(applicationContext);
+            }
         }
 
-        public IApplicationContext ApplicationContext { get; set; }
+        public IApplicationContext ApplicationContext
+        {
+            get => _applicationContext;
+            set
+            {
+                _applicationContext = value;
+                if (_applicationContext != null)
+                {
+                    Resolver = _applicationContext.ServiceExpressionResolver;
+                    ExpressionContext = new ServiceExpressionContext(_applicationContext);
+                    ServiceResolver = new ServiceFactoryResolver(_applicationContext);
+                }
+            }
+        }
 
         public string Id { get; set; }
 
-        public List<Queue> Queues { get; } = new List<Queue>();
+        public List<IQueue> Queues { get; } = new List<IQueue>();
 
         public List<string> QueueNames { get; } = new List<string>();
 
@@ -50,11 +63,11 @@ namespace Steeltoe.Messaging.Rabbit.Listener
 
         public int? Concurrency { get; set; }
 
-        public IAmqpAdmin Admin { get; set; }
+        public IRabbitAdmin Admin { get; set; }
 
         public bool? AutoStartup { get; set; }
 
-        public IMessageConverter MessageConverter { get; set; }
+        public ISmartMessageConverter MessageConverter { get; set; }
 
         public bool BatchListener { get; set; }
 
@@ -64,7 +77,9 @@ namespace Steeltoe.Messaging.Rabbit.Listener
 
         public IReplyPostProcessor ReplyPostProcessor { get; set; }
 
-        public void SetQueues(params Queue[] queues)
+        public string Group { get; set; }
+
+        public void SetQueues(params IQueue[] queues)
         {
             if (queues == null)
             {
@@ -118,7 +133,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener
 
             if (Admin != null)
             {
-                container.AmqpAdmin = Admin;
+                container.RabbitAdmin = Admin;
             }
 
             SetupMessageListener(listenerContainer);

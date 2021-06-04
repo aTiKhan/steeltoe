@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using Steeltoe.Common;
@@ -23,7 +13,7 @@ using System.Text.Json;
 
 namespace Steeltoe.Management.Endpoint.Loggers
 {
-    public class LoggersEndpoint : AbstractEndpoint<Dictionary<string, object>, LoggersChangeRequest>
+    public class LoggersEndpoint : AbstractEndpoint<Dictionary<string, object>, LoggersChangeRequest>, ILoggersEndpoint
     {
         private static readonly List<string> Levels = new List<string>()
         {
@@ -39,7 +29,7 @@ namespace Steeltoe.Management.Endpoint.Loggers
         private readonly ILogger<LoggersEndpoint> _logger;
         private readonly IDynamicLoggerProvider _cloudFoundryLoggerProvider;
 
-        public LoggersEndpoint(ILoggersOptions options, IDynamicLoggerProvider cloudFoundryLoggerProvider, ILogger<LoggersEndpoint> logger = null)
+        public LoggersEndpoint(ILoggersOptions options, IDynamicLoggerProvider cloudFoundryLoggerProvider = null, ILogger<LoggersEndpoint> logger = null)
             : base(options)
         {
             _cloudFoundryLoggerProvider = cloudFoundryLoggerProvider;
@@ -63,7 +53,7 @@ namespace Steeltoe.Management.Endpoint.Loggers
 
         public virtual Dictionary<string, object> DoInvoke(IDynamicLoggerProvider provider, LoggersChangeRequest request)
         {
-            Dictionary<string, object> result = new Dictionary<string, object>();
+            var result = new Dictionary<string, object>();
 
             if (request != null)
             {
@@ -73,11 +63,11 @@ namespace Steeltoe.Management.Endpoint.Loggers
             {
                 AddLevels(result);
                 var configuration = GetLoggerConfigurations(provider);
-                Dictionary<string, LoggerLevels> loggers = new Dictionary<string, LoggerLevels>();
+                var loggers = new Dictionary<string, LoggerLevels>();
                 foreach (var c in configuration.OrderBy(entry => entry.Name))
                 {
                     _logger.LogTrace("Adding " + c.ToString());
-                    LoggerLevels lv = new LoggerLevels(c.ConfiguredLevel, c.EffectiveLevel);
+                    var lv = new LoggerLevels(c.ConfiguredLevel, c.EffectiveLevel);
                     loggers.Add(c.Name, lv);
                 }
 

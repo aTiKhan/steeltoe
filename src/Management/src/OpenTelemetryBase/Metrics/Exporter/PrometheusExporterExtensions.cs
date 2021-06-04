@@ -1,18 +1,10 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using OpenTelemetry.Metrics.Export;
+using Steeltoe.Management.OpenTelemetry.Metrics.Processor;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -30,12 +22,27 @@ namespace Steeltoe.Management.OpenTelemetry.Metrics.Exporter
         /// <param name="writer">StreamWriter to write to.</param>
         public static void WriteMetricsCollection(this PrometheusExporter exporter, StreamWriter writer)
         {
-            foreach (var metric in exporter.GetAndClearDoubleMetrics())
+            var doubleMetrics = exporter.GetAndClearDoubleMetrics();
+            var metricNames = new HashSet<string>();
+
+            foreach (var metric in doubleMetrics)
             {
                 var labels = metric.Labels;
+
+                bool isFirst = false;
+                if (!metricNames.Contains(metric.MetricName))
+                {
+                    isFirst = true;
+                    metricNames.Add(metric.MetricName);
+                }
+
                 var builder = new PrometheusMetricBuilder()
-                    .WithName(metric.MetricName)
-                    .WithDescription(metric.MetricDescription);
+                    .WithName(metric.MetricName);
+
+                if (isFirst)
+                {
+                    builder = builder.WithDescription(metric.MetricDescription);
+                }
 
                 switch (metric.AggregationType)
                 {
@@ -43,8 +50,11 @@ namespace Steeltoe.Management.OpenTelemetry.Metrics.Exporter
                         {
                             var doubleSum = metric.Data as SumData<double>;
                             var doubleValue = doubleSum.Sum;
+                            if (isFirst)
+                            {
+                                builder = builder.WithType("counter");
+                            }
 
-                            builder = builder.WithType("counter");
                             var metricValueBuilder = builder.AddValue();
                             metricValueBuilder = metricValueBuilder.WithValue(doubleValue);
 
@@ -61,9 +71,20 @@ namespace Steeltoe.Management.OpenTelemetry.Metrics.Exporter
                         {
                             var doubleSummary = metric.Data as SummaryData<double>;
 
-                            builder = builder.WithType("summary");
+                            if (isFirst)
+                            {
+                                builder = builder.WithType("summary");
+                            }
+
                             var metricValueBuilder = builder.AddValue();
-                            metricValueBuilder = metricValueBuilder.WithValue(doubleSummary.Count);
+                            var mean = 0D;
+
+                            if (doubleSummary.Count > 0)
+                            {
+                                mean = doubleSummary.Sum / doubleSummary.Count;
+                            }
+
+                            metricValueBuilder = metricValueBuilder.WithValue(mean);
 
                             foreach (var label in labels)
                             {
@@ -80,8 +101,19 @@ namespace Steeltoe.Management.OpenTelemetry.Metrics.Exporter
             {
                 var labels = metric.Labels;
                 var builder = new PrometheusMetricBuilder()
-                    .WithName(metric.MetricName)
-                    .WithDescription(metric.MetricDescription);
+                    .WithName(metric.MetricName);
+
+                bool isFirst = false;
+                if (!metricNames.Contains(metric.MetricName))
+                {
+                    isFirst = true;
+                    metricNames.Add(metric.MetricName);
+                }
+
+                if (isFirst)
+                {
+                    builder = builder.WithDescription(metric.MetricDescription);
+                }
 
                 switch (metric.AggregationType)
                 {
@@ -89,7 +121,11 @@ namespace Steeltoe.Management.OpenTelemetry.Metrics.Exporter
                         {
                             var longSum = metric.Data as SumData<long>;
                             var longValue = longSum.Sum;
-                            builder = builder.WithType("counter");
+
+                            if (isFirst)
+                            {
+                                builder = builder.WithType("counter");
+                            }
 
                             foreach (var label in labels)
                             {
@@ -104,7 +140,29 @@ namespace Steeltoe.Management.OpenTelemetry.Metrics.Exporter
 
                     case AggregationType.Summary:
                         {
-                            // Not supported yet.
+                            var longSummary = metric.Data as SummaryData<long>;
+
+                            if (isFirst)
+                            {
+                                builder = builder.WithType("summary");
+                            }
+
+                            var metricValueBuilder = builder.AddValue();
+                            var mean = 0L;
+
+                            if (longSummary.Count > 0)
+                            {
+                                mean = longSummary.Sum / longSummary.Count;
+                            }
+
+                            metricValueBuilder = metricValueBuilder.WithValue(mean);
+
+                            foreach (var label in labels)
+                            {
+                                metricValueBuilder.WithLabel(label.Key, label.Value);
+                            }
+
+                            builder.Write(writer);
                             break;
                         }
                 }

@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -20,7 +10,6 @@ using Steeltoe.Management.Endpoint.Security;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using HealthCheckResult = Steeltoe.Common.HealthChecks.HealthCheckResult;
 
 namespace Steeltoe.Management.Endpoint.Health
 {
@@ -35,16 +24,6 @@ namespace Steeltoe.Management.Endpoint.Health
         public HealthEndpointCore(IHealthOptions options, IHealthAggregator aggregator, IEnumerable<IHealthContributor> contributors, IOptionsMonitor<HealthCheckServiceOptions> serviceOptions, IServiceProvider provider, ILogger<HealthEndpoint> logger = null)
             : base(options, aggregator, contributors, logger)
         {
-            if (options == null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
-
-            if (contributors == null)
-            {
-                throw new ArgumentNullException(nameof(contributors));
-            }
-
             _aggregator = aggregator ?? throw new ArgumentNullException(nameof(aggregator));
             _serviceOptions = serviceOptions ?? throw new ArgumentNullException(nameof(serviceOptions));
             _provider = provider ?? throw new ArgumentNullException(nameof(provider));
@@ -52,41 +31,67 @@ namespace Steeltoe.Management.Endpoint.Health
             _logger = logger;
         }
 
-        public new IHealthOptions Options
+        public new IHealthOptions Options => options as IHealthOptions;
+
+        public override HealthEndpointResponse Invoke(ISecurityContext securityContext)
         {
-            get
+            return BuildHealth(securityContext);
+        }
+
+        protected override HealthEndpointResponse BuildHealth(ISecurityContext securityContext)
+        {
+            var groupName = GetRequestedHealthGroup(securityContext);
+            ICollection<HealthCheckRegistration> healthCheckRegistrations;
+            IList<IHealthContributor> filteredContributors;
+            if (!string.IsNullOrEmpty(groupName) && groupName != Options.Id)
             {
-                return options as IHealthOptions;
+                filteredContributors = GetFilteredContributorList(groupName, _contributors);
+                healthCheckRegistrations = GetFilteredHealthCheckServiceOptions(groupName, _serviceOptions);
             }
-        }
+            else
+            {
+                filteredContributors = _contributors;
+                healthCheckRegistrations = _serviceOptions.CurrentValue.Registrations;
+            }
 
-        public override HealthCheckResult Invoke(ISecurityContext securityContext)
-        {
-            return BuildHealth(_aggregator, _contributors, securityContext, _serviceOptions, _provider);
-        }
-
-        protected virtual HealthCheckResult BuildHealth(IHealthAggregator aggregator, IList<IHealthContributor> contributors, ISecurityContext securityContext, IOptionsMonitor<HealthCheckServiceOptions> svcOptions, IServiceProvider provider)
-        {
-            var registrationAggregator = _aggregator as IHealthRegistrationsAggregator;
-
-            var result = registrationAggregator == null
-                ? _aggregator.Aggregate(contributors)
-                : registrationAggregator.Aggregate(contributors, svcOptions, provider);
+            var result = !(_aggregator is IHealthRegistrationsAggregator registrationAggregator)
+                                ? _aggregator.Aggregate(filteredContributors)
+                                : registrationAggregator.Aggregate(filteredContributors, healthCheckRegistrations, _provider);
+            var response = new HealthEndpointResponse(result);
 
             var showDetails = Options.ShowDetails;
-
-            if (showDetails == ShowDetails.Never
-                || (showDetails == ShowDetails.WhenAuthorized
-                      && !securityContext.HasClaim(Options.Claim)))
+            if (showDetails == ShowDetails.Never || (showDetails == ShowDetails.WhenAuthorized && !securityContext.HasClaim(Options.Claim)))
             {
-                result = new HealthCheckResult
-                {
-                    Status = result.Status,
-                    Description = result.Description
-                };
+                response.Details = new Dictionary<string, object>();
+            }
+            else
+            {
+                response.Groups = Options.Groups.Select(g => g.Key);
             }
 
-            return result;
+            return response;
+        }
+
+        private ICollection<HealthCheckRegistration> GetFilteredHealthCheckServiceOptions(string requestedGroup, IOptionsMonitor<HealthCheckServiceOptions> svcOptions)
+        {
+            if (!string.IsNullOrEmpty(requestedGroup))
+            {
+                if (Options.Groups.TryGetValue(requestedGroup, out var groupOptions))
+                {
+                    var includedContributors = groupOptions.Include.Split(",").ToList();
+                    return svcOptions.CurrentValue.Registrations.Where(n => includedContributors.Contains(n.Name, StringComparer.InvariantCultureIgnoreCase)).ToList();
+                }
+                else
+                {
+                    _logger?.LogInformation("Health check requested for a group that is not configured");
+                }
+            }
+            else
+            {
+                _logger?.LogTrace("Health group name not found in request");
+            }
+
+            return svcOptions.CurrentValue.Registrations;
         }
     }
 }

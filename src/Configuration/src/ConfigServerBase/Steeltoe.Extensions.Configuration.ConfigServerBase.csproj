@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <RootNamespace>Steeltoe.Extensions.Configuration.ConfigServer</RootNamespace>
     <Description>Configuration provider for reading from Spring Cloud Config Server</Description>
     <PackageTags>configuration;Spring Cloud;Spring Cloud Config Server</PackageTags>
@@ -8,16 +8,14 @@
 
   <Import Project="..\..\..\..\versions.props" />
   <Import Project="..\..\..\..\sharedproject.props" />
+
+  <ItemGroup>
+    <PackageReference Include="System.Net.Http.Json" Version="3.2.1" />
+  </ItemGroup>
   
-  <ItemGroup Condition="'$(CI_BUILD)' == ''">
+  <ItemGroup>
     <ProjectReference Include="..\..\..\Common\src\Common.Http\Steeltoe.Common.Http.csproj" />
     <ProjectReference Include="..\CloudFoundryBase\Steeltoe.Extensions.Configuration.CloudFoundryBase.csproj" />
     <ProjectReference Include="..\PlaceholderBase\Steeltoe.Extensions.Configuration.PlaceholderBase.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(CI_BUILD)' == 'True'">
-    <PackageReference Include="Steeltoe.Common.Http" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Extensions.Configuration.CloudFoundryBase" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Extensions.Configuration.PlaceHolderBase" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
   </ItemGroup>
 </Project>

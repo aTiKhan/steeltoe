@@ -1,37 +1,27 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
-using Steeltoe.Messaging.Rabbit.Support;
+using Steeltoe.Messaging.RabbitMQ.Exceptions;
+using Steeltoe.Messaging.RabbitMQ.Support;
 using System;
-using System.IO;
+using RC = RabbitMQ.Client;
 
-namespace Steeltoe.Messaging.Rabbit.Connection
+namespace Steeltoe.Messaging.RabbitMQ.Connection
 {
 #pragma warning disable S3881 // "IDisposable" should be implemented correctly
-    public class SimpleConnection : IConnection, NetworkConnection
+    public class SimpleConnection : IConnection, RC.NetworkConnection
 #pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
-        private readonly RabbitMQ.Client.IConnection _connection;
+        private readonly RC.IConnection _connection;
         private readonly int _closeTimeout;
         private readonly ILogger _logger;
 
         public int LocalPort => _connection.LocalPort;
 
-        public RabbitMQ.Client.IConnection Connection => _connection;
+        public RC.IConnection Connection => _connection;
 
         public bool IsOpen => _connection.IsOpen;
 
@@ -41,21 +31,21 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
         public int RemotePort => _connection.Endpoint.Port;
 
-        public SimpleConnection(RabbitMQ.Client.IConnection connection, int closeTimeout, ILogger logger = null)
+        public SimpleConnection(RC.IConnection connection, int closeTimeout, ILogger logger = null)
         {
             _connection = connection;
             _closeTimeout = closeTimeout;
             _logger = logger;
         }
 
-        public IModel CreateChannel(bool transactional = false)
+        public RC.IModel CreateChannel(bool transactional = false)
         {
             try
             {
                 var result = _connection.CreateModel();
                 if (result == null)
                 {
-                    throw new InvalidOperationException("The channelMax limit is reached. Try later.");
+                    throw new RabbitResourceNotAvailableException("The channelMax limit is reached. Try later.");
                 }
 
                 if (transactional)
@@ -65,7 +55,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
                 return result;
             }
-            catch (IOException e)
+            catch (Exception e)
             {
                 throw RabbitExceptionTranslator.ConvertRabbitAccessException(e);
             }
@@ -84,7 +74,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             {
                 // Ignore
             }
-            catch (IOException e)
+            catch (Exception e)
             {
                 throw RabbitExceptionTranslator.ConvertRabbitAccessException(e);
             }

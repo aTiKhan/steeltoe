@@ -1,24 +1,14 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
-using Steeltoe.Messaging.Rabbit.Core;
+using Steeltoe.Messaging.RabbitMQ.Core;
 using System;
 using System.Collections.Generic;
 using System.Security.Authentication;
-using static Steeltoe.Messaging.Rabbit.Connection.CachingConnectionFactory;
+using static Steeltoe.Messaging.RabbitMQ.Connection.CachingConnectionFactory;
 
-namespace Steeltoe.Messaging.Rabbit.Config
+namespace Steeltoe.Messaging.RabbitMQ.Config
 {
     public class RabbitOptions
     {
@@ -35,7 +25,6 @@ namespace Steeltoe.Messaging.Rabbit.Config
             Cache = new CacheOptions();
             Listener = new ListenerOptions();
             Template = new TemplateOptions();
-            Cache = new CacheOptions();
         }
 
         public string Host { get; set; } = DEFAULT_HOST;
@@ -71,7 +60,7 @@ namespace Steeltoe.Messaging.Rabbit.Config
             var parsed = ParsedAddresses;
             if (parsed.Count == 0)
             {
-                return Host + ":" + Port;
+                return null;
             }
 
             var addressStrings = new List<string>();
@@ -151,6 +140,18 @@ namespace Steeltoe.Messaging.Rabbit.Config
             return address.VirtualHost ?? VirtualHost;
         }
 
+        public bool DetermineSslEnabled()
+        {
+            var parsed = ParsedAddresses;
+            if (parsed.Count == 0)
+            {
+                return Ssl.Enabled;
+            }
+
+            var address = parsed[0];
+            return address.SecureConnection != null ? address.SecureConnection.Value : Ssl.Enabled;
+        }
+
         public TimeSpan? RequestedHeartbeat { get; set; }
 
         public bool PublisherConfirms { get; set; }
@@ -173,7 +174,13 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
             public bool VerifyHostname { get; set; } = true;
 
-            public SslProtocols Algorithm { get; set; } = SslProtocols.Tls11;
+            public string CertPath { get; set; }
+
+            public string CertPassphrase { get; set; }
+
+            public string ServerHostName { get; set; }
+
+            public SslProtocols Algorithm { get; set; } = SslProtocols.Tls13 | SslProtocols.Tls12;
         }
 
         public class CacheOptions
@@ -229,7 +236,7 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
             public int? Prefetch { get; set; }
 
-            public bool DefaultRequeueRejected { get; set; }
+            public bool DefaultRequeueRejected { get; set; } = true;
 
             public TimeSpan? IdleEventInterval { get; set; }
 
@@ -238,6 +245,8 @@ namespace Steeltoe.Messaging.Rabbit.Config
             public bool MissingQueuesFatal { get; set; } = false;
 
             public int? ConsumersPerQueue { get; set; }
+
+            public bool PossibleAuthenticationFailureFatal { get; set; } = true;
         }
 
         public class RetryOptions
@@ -261,6 +270,7 @@ namespace Steeltoe.Messaging.Rabbit.Config
         private class Address
         {
             private const string PREFIX_AMQP = "amqp://";
+            private const string PREFIX_AMQP_SECURE = "amqps://";
 
             public Address(string input)
             {
@@ -281,11 +291,19 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
             public string VirtualHost { get; private set; }
 
+            public bool? SecureConnection { get; private set; }
+
             private string TrimPrefix(string input)
             {
                 if (input.StartsWith(PREFIX_AMQP))
                 {
                     input = input.Substring(PREFIX_AMQP.Length);
+                    SecureConnection = false;
+                }
+                else if (input.StartsWith(PREFIX_AMQP_SECURE))
+                {
+                    input = input.Substring(PREFIX_AMQP_SECURE.Length);
+                    SecureConnection = true;
                 }
 
                 return input;

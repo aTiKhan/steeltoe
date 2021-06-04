@@ -1,21 +1,13 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.Common.HealthChecks;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using HealthCheckResult = Steeltoe.Common.HealthChecks.HealthCheckResult;
 
 namespace Steeltoe.Management.Endpoint.Health
@@ -29,40 +21,60 @@ namespace Steeltoe.Management.Endpoint.Health
                 return new HealthCheckResult();
             }
 
-            var result = new HealthCheckResult();
-            foreach (var contributor in contributors)
+            var aggregatorResult = new HealthCheckResult();
+            var healthChecks = new ConcurrentDictionary<string, HealthCheckResult>();
+            var keyList = new ConcurrentBag<string>();
+            Parallel.ForEach(contributors, contributor =>
             {
-                HealthCheckResult h = null;
+                var contributorId = GetKey(keyList, contributor.Id);
+                HealthCheckResult healthCheckResult = null;
                 try
                 {
-                    h = contributor.Health();
+                    healthCheckResult = contributor.Health();
                 }
                 catch (Exception)
                 {
-                    h = new HealthCheckResult();
+                    healthCheckResult = new HealthCheckResult();
                 }
 
-                if (h.Status > result.Status)
+                healthChecks.TryAdd(contributorId, healthCheckResult);
+            });
+
+            return AddChecksSetStatus(aggregatorResult, healthChecks);
+        }
+
+        protected static string GetKey(ConcurrentBag<string> keys, string key)
+        {
+            lock (keys)
+            {
+                // add the contributor with a -n appended to the id
+                if (keys.Any(k => k.Equals(key)))
                 {
-                    result.Status = h.Status;
+                    var newKey = string.Concat(key, "-", keys.Count(k => k.StartsWith(key)));
+                    keys.Add(newKey);
+                    return newKey;
+                }
+                else
+                {
+                    keys.Add(key);
+                    return key;
+                }
+            }
+        }
+
+        protected HealthCheckResult AddChecksSetStatus(HealthCheckResult result, ConcurrentDictionary<string, HealthCheckResult> healthChecks)
+        {
+            foreach (var healthCheck in healthChecks)
+            {
+                if (healthCheck.Value.Status > result.Status)
+                {
+                    result.Status = healthCheck.Value.Status;
                 }
 
-                string key = GetKey(result, contributor.Id);
-                result.Details.Add(key, h.Details);
+                result.Details.Add(healthCheck.Key, healthCheck.Value.Details);
             }
 
             return result;
-        }
-
-        protected static string GetKey(HealthCheckResult result, string key)
-        {
-            // add the contribtor with a -n appended to the id
-            if (result.Details.ContainsKey(key))
-            {
-                return string.Concat(key, "-", result.Details.Count(k => k.Key == key));
-            }
-
-            return key;
         }
     }
 }

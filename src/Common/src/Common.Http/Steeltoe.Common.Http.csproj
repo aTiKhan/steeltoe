@@ -1,25 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\..\versions.props" />
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <Description>Steeltoe common library for HTTP</Description>
     <PackageTags>NET Core;NET Framework</PackageTags>
   </PropertyGroup>
+
+  <Import Project="..\..\..\..\versions.props" />
   <Import Project="..\..\..\..\sharedproject.props" />
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="$(HttpExtensionsVersion)" />
-    <PackageReference Include="Newtonsoft.Json" Version="$(JsonNetVersion)" />
-    <PackageReference Include="System.Net.Http" Version="$(HttpVersion)" />
+    <PackageReference Include="System.Text.Json" Version="$(SystemJsonVersion)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(CI_BUILD)' == ''">
+  <ItemGroup>
     <ProjectReference Include="..\Common\Steeltoe.Common.csproj" />
     <ProjectReference Include="..\..\..\Discovery\src\Abstractions\Steeltoe.Discovery.Abstractions.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(CI_BUILD)' == 'True'">
-    <PackageReference Include="Steeltoe.Common" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Discovery.Abstractions" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
   </ItemGroup>
 </Project>

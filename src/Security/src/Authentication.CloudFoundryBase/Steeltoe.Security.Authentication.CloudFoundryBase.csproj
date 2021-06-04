@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     <RootNamespace>Steeltoe.Security.Authentication.CloudFoundry</RootNamespace>
     <Description>Base Security Provider for CloudFoundry</Description>
     <PackageTags>CloudFoundry;security;oauth2;sso;openid</PackageTags>
@@ -9,14 +9,9 @@
   <Import Project="..\..\..\..\versions.props" />
   <Import Project="..\..\..\..\sharedproject.props" />
   
-  <ItemGroup Condition="'$(CI_BUILD)' == ''">
+  <ItemGroup>
     <ProjectReference Include="..\..\..\Common\src\Common.Http\Steeltoe.Common.Http.csproj" />
-    <ProjectReference Include="..\..\..\Connectors\src\ConnectorBase\Steeltoe.ConnectorBase.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(CI_BUILD)' == 'True'">
-    <PackageReference Include="Steeltoe.Common.Http" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.CloudFoundry.ConnectorBase" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
+    <ProjectReference Include="..\..\..\Connectors\src\ConnectorBase\Steeltoe.Connector.ConnectorBase.csproj" />
   </ItemGroup>
 
   <ItemGroup>

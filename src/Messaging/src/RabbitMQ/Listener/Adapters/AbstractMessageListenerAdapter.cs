@@ -1,45 +1,47 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
-using Steeltoe.Common.Expression;
+using Steeltoe.Common.Configuration;
+using Steeltoe.Common.Contexts;
+using Steeltoe.Common.Expression.Internal;
+using Steeltoe.Common.Expression.Internal.Contexts;
+using Steeltoe.Common.Expression.Internal.Spring.Common;
+using Steeltoe.Common.Expression.Internal.Spring.Standard;
+using Steeltoe.Common.Expression.Internal.Spring.Support;
 using Steeltoe.Common.Retry;
 using Steeltoe.Common.Util;
-using Steeltoe.Messaging.Rabbit.Core;
-using Steeltoe.Messaging.Rabbit.Data;
-using Steeltoe.Messaging.Rabbit.Exceptions;
-using Steeltoe.Messaging.Rabbit.Expressions;
-using Steeltoe.Messaging.Rabbit.Listener.Support;
-using Steeltoe.Messaging.Rabbit.Support;
-using Steeltoe.Messaging.Rabbit.Support.Converter;
+using Steeltoe.Messaging.Converter;
+using Steeltoe.Messaging.RabbitMQ.Core;
+using Steeltoe.Messaging.RabbitMQ.Exceptions;
+using Steeltoe.Messaging.RabbitMQ.Extensions;
+using Steeltoe.Messaging.RabbitMQ.Listener.Support;
+using Steeltoe.Messaging.RabbitMQ.Support;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
+using RC=RabbitMQ.Client;
 
-namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
+namespace Steeltoe.Messaging.RabbitMQ.Listener.Adapters
 {
     public abstract class AbstractMessageListenerAdapter : IChannelAwareMessageListener
     {
         protected readonly ILogger _logger;
+
         private const string DEFAULT_ENCODING = "UTF-8";
 
-        protected AbstractMessageListenerAdapter(ILogger logger = null)
+        private static readonly SpelExpressionParser PARSER = new SpelExpressionParser();
+        private static readonly IParserContext PARSER_CONTEXT = new TemplateParserContext("!{", "}");
+
+        protected AbstractMessageListenerAdapter(IApplicationContext context, ILogger logger = null)
         {
             _logger = logger;
+            MessageConverter = new RabbitMQ.Support.Converter.SimpleMessageConverter();
+            ApplicationContext = context;
         }
+
+        public IApplicationContext ApplicationContext { get; set; }
 
         public virtual string Encoding { get; set; } = DEFAULT_ENCODING;
 
@@ -51,7 +53,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
 
         public virtual bool MandatoryPublish { get; set; }
 
-        public virtual IMessageConverter MessageConverter { get; set; }
+        public virtual ISmartMessageConverter MessageConverter { get; set; }
 
         public virtual List<IMessagePostProcessor> BeforeSendReplyPostProcessors { get; private set; }
 
@@ -59,15 +61,15 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
 
         public virtual IRecoveryCallback RecoveryCallback { get; set; }
 
-        public virtual bool DefaultRequeueRejected { get; set; }
+        public virtual bool DefaultRequeueRejected { get; set; } = true;
 
         public virtual AcknowledgeMode ContainerAckMode { get; set; }
 
         public virtual bool IsManualAck => ContainerAckMode == AcknowledgeMode.MANUAL;
 
-        public virtual IEvaluationContext EvalContext { get; set; }
+        public virtual StandardEvaluationContext EvalContext { get; set; } = new StandardEvaluationContext();
 
-        public virtual IMessagePropertiesConverter MessagePropertiesConverter { get; set; } = new DefaultMessagePropertiesConverter();
+        public virtual IMessageHeadersConverter MessagePropertiesConverter { get; set; } = new DefaultMessageHeadersConverter();
 
         public virtual IExpression ResponseExpression { get; set; }
 
@@ -75,17 +77,21 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
 
         public virtual void SetResponseAddress(string defaultReplyTo)
         {
-            // TODO: Java has Expression support?
-            ResponseAddress = new Address(defaultReplyTo);
+            if (defaultReplyTo.StartsWith(PARSER_CONTEXT.ExpressionPrefix))
+            {
+                ResponseExpression = PARSER.ParseExpression(defaultReplyTo, PARSER_CONTEXT);
+            }
+            else
+            {
+                ResponseAddress = new Address(defaultReplyTo);
+            }
         }
 
         public void SetServiceResolver(IServiceResolver serviceResolver)
         {
-            throw new NotImplementedException();
-
-            // EvalContext.setBeanResolver(ServiceResolver);
-            // EvalContext.setTypeConverter(new StandardTypeConverter());
-            // EvalContext.addPropertyAccessor(new MapAccessor());
+            EvalContext.ServiceResolver = serviceResolver;
+            EvalContext.TypeConverter = new StandardTypeConverter();
+            EvalContext.AddPropertyAccessor(new DictionaryAccessor());
         }
 
         public virtual void SetBeforeSendReplyPostProcessors(params IMessagePostProcessor[] beforeSendReplyPostProcessors)
@@ -106,45 +112,61 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             BeforeSendReplyPostProcessors = new List<IMessagePostProcessor>(beforeSendReplyPostProcessors);
         }
 
-        public abstract void OnMessage(Message message, IModel channel);
+        public abstract void OnMessage(IMessage message, RC.IModel channel);
 
-        public virtual void OnMessage(Message message)
+        public virtual void OnMessage(IMessage message)
         {
             throw new InvalidOperationException("Should never be called for a ChannelAwareMessageListener");
         }
 
-        public virtual void OnMessageBatch(List<Message> messages, IModel channel)
+        public virtual void OnMessageBatch(List<IMessage> messages, RC.IModel channel)
         {
             throw new NotSupportedException("This listener does not support message batches");
         }
 
-        public virtual void OnMessageBatch(List<Message> messages)
+        public virtual void OnMessageBatch(List<IMessage> messages)
         {
             throw new NotSupportedException("This listener does not support message batches");
+        }
+
+        protected internal virtual IMessage<byte[]> BuildMessage(RC.IModel channel, object result, Type genericType)
+        {
+            var converter = MessageConverter;
+            if (converter != null && !(result is IMessage<byte[]>))
+            {
+                result = converter.ToMessage(result, new MessageHeaders(), genericType);
+            }
+
+            if (!(result is IMessage<byte[]>))
+            {
+                throw new MessageConversionException("No MessageConverter specified - cannot handle message [" + result + "]");
+            }
+
+            return (IMessage<byte[]>)result;
         }
 
         protected virtual void HandleListenerException(Exception exception)
         {
-            _logger?.LogError("Listener execution failed", exception);
+            _logger?.LogError(exception, "Listener execution failed");
         }
 
-        protected virtual object ExtractMessage(Message message)
+        protected virtual object ExtractMessage(IMessage message)
         {
             var converter = MessageConverter;
             if (converter != null)
             {
-                return converter.FromMessage(message);
+                return converter.FromMessage(message, null);
             }
 
             return message;
         }
 
-        protected virtual void HandleResult(InvocationResult resultArg, Message request, IModel channel)
+        protected virtual void HandleResult(InvocationResult resultArg, IMessage request, RC.IModel channel)
         {
             HandleResult(resultArg, request, channel, null);
         }
 
-        protected virtual void HandleResult(InvocationResult resultArg, Message request, IModel channel, object source)
+        protected virtual void HandleResult(InvocationResult resultArg, IMessage request, RC.IModel channel, object source)
         {
             if (channel != null)
             {
@@ -162,7 +184,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
                         {
                             if (t.IsCompletedSuccessfully)
                             {
-                                AsyncSuccess(resultArg, request, channel, source, t);
+                                AsyncSuccess(resultArg, request, channel, source, GetReturnValue(t));
                                 BasicAck(request, channel);
                             }
                             else
@@ -183,15 +205,15 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             }
         }
 
-        protected virtual void DoHandleResult(InvocationResult resultArg, Message request, IModel channel, object source)
+        protected virtual void DoHandleResult(InvocationResult resultArg, IMessage request, RC.IModel channel, object source)
         {
-            _logger?.LogDebug("Listener method returned result [" + resultArg + "] - generating response message for it");
+            _logger?.LogDebug("Listener method returned result [{result}] - generating response message for it", resultArg);
             try
             {
                 var response = BuildMessage(channel, resultArg.ReturnValue, resultArg.ReturnType);
-                var props = response.MessageProperties;
-                props.Target = resultArg.Instance;
-                props.TargetMethod = resultArg.Method;
+                var accessor = RabbitHeaderAccessor.GetMutableAccessor(response);
+                accessor.Target = resultArg.Instance;
+                accessor.TargetMethod = resultArg.Method;
                 PostProcessResponse(request, response);
                 var replyTo = GetReplyToAddress(request, source, resultArg);
                 SendResponse(channel, replyTo, response);
@@ -202,48 +224,31 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             }
         }
 
-        protected virtual string GetReceivedExchange(Message request)
+        protected virtual string GetReceivedExchange(IMessage request)
         {
-            return request.MessageProperties.ReceivedExchange;
+            return request.Headers.ReceivedExchange();
         }
 
-        protected virtual Message BuildMessage(IModel channel, object result, Type genericType)
+        protected virtual void PostProcessResponse(IMessage request, IMessage response)
         {
-            var converter = MessageConverter;
-            if (converter != null && !(result is Message))
-            {
-                return converter.ToMessage(result, new MessageProperties(), genericType);
-            }
-            else
-            {
-                if (!(result is Message))
-                {
-                    throw new MessageConversionException("No MessageConverter specified - cannot handle message [" + result + "]");
-                }
-
-                return (Message)result;
-            }
-        }
-
-        protected virtual void PostProcessResponse(Message request, Message response)
-        {
-            var correlation = request.MessageProperties.CorrelationId;
+            var correlation = request.Headers.CorrelationId();
 
             if (correlation == null)
             {
-                var messageId = request.MessageProperties.MessageId;
+                var messageId = request.Headers.MessageId();
                 if (messageId != null)
                 {
                     correlation = messageId;
                 }
             }
 
-            response.MessageProperties.CorrelationId = correlation;
+            var accessor = RabbitHeaderAccessor.GetMutableAccessor(response);
+            accessor.CorrelationId = correlation;
         }
 
-        protected virtual Address GetReplyToAddress(Message request, object source, InvocationResult result)
+        protected virtual Address GetReplyToAddress(IMessage request, object source, InvocationResult result)
         {
-            var replyTo = request.MessageProperties.ReplyToAddress;
+            var replyTo = request.Headers.ReplyToAddress();
             if (replyTo == null)
             {
                 if (ResponseAddress == null && ResponseExchange != null)
@@ -255,13 +260,17 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
                 {
                     replyTo = EvaluateReplyTo(request, source, result.ReturnValue, result.SendTo);
                 }
+                else if (request.Headers.ReplyTo() != null)
+                {
+                    return new Address(request.Headers.ReplyTo());
+                }
                 else if (ResponseExpression != null)
                 {
                     replyTo = EvaluateReplyTo(request, source, result.ReturnValue, ResponseExpression);
                 }
                 else if (ResponseAddress == null)
                 {
-                    throw new AmqpException(
+                    throw new RabbitException(
                             "Cannot determine ReplyTo message property value: " +
                                     "Request message does not contain reply-to property, " +
                                     "and no default response Exchange was set.");
@@ -275,15 +284,22 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             return replyTo;
         }
 
-        protected void SendResponse(IModel channel, Address replyTo, Message messageIn)
+        protected void SendResponse(RC.IModel channel, Address replyTo, IMessage<byte[]> messageIn)
         {
             var message = messageIn;
             if (BeforeSendReplyPostProcessors != null)
             {
                 var processors = BeforeSendReplyPostProcessors;
+                IMessage postProcessed = message;
                 foreach (var postProcessor in processors)
                 {
-                    message = postProcessor.PostProcessMessage(message);
+                    postProcessed = postProcessor.PostProcessMessage(postProcessed);
+                }
+
+                message = postProcessed as IMessage<byte[]>;
+                if (message == null)
+                {
+                    throw new InvalidOperationException("A BeforeSendReplyPostProcessors failed to return IMessage<byte[]>");
                 }
             }
 
@@ -291,7 +307,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
 
             try
             {
-                _logger?.LogDebug("Publishing response to exchange = [" + replyTo.ExchangeName + "], routingKey = [" + replyTo.RoutingKey + "]");
+                _logger?.LogDebug("Publishing response to exchange = [{exchange}], routingKey = [{routingKey}]", replyTo.ExchangeName, replyTo.RoutingKey);
                 if (RetryTemplate == null)
                 {
                     DoPublish(channel, replyTo, message);
@@ -327,25 +343,34 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             }
         }
 
-        protected virtual void DoPublish(IModel channel, Address replyTo, Message message)
+        protected virtual void DoPublish(RC.IModel channel, Address replyTo, IMessage<byte[]> message)
         {
-            channel.BasicPublish(
-                replyTo.ExchangeName,
-                replyTo.RoutingKey,
-                MandatoryPublish,
-                MessagePropertiesConverter.FromMessageProperties(message.MessageProperties, channel.CreateBasicProperties(), EncodingUtils.GetEncoding(Encoding)),
-                message.Body);
+            var props = channel.CreateBasicProperties();
+            MessagePropertiesConverter.FromMessageHeaders(message.Headers, props, EncodingUtils.GetEncoding(Encoding));
+            channel.BasicPublish(replyTo.ExchangeName, replyTo.RoutingKey, MandatoryPublish, props, message.Payload);
         }
 
-        protected virtual void PostProcessChannel(IModel channel, Message response)
+        protected virtual void PostProcessChannel(RC.IModel channel, IMessage response)
         {
         }
 
-        private Address EvaluateReplyTo(Message request, object source, object result, IExpression expression)
+        private static object GetReturnValue(Task task)
+        {
+            var taskType = task.GetType();
+            if (!taskType.IsGenericType)
+            {
+                return null;
+            }
+
+            var property = taskType.GetProperty("Result");
+            return property.GetValue(task);
+        }
+
+        private Address EvaluateReplyTo(IMessage request, object source, object result, IExpression expression)
         {
             Address replyTo;
             var value = expression.GetValue(EvalContext, new ReplyExpressionRoot(request, source, result));
-            if (!(value is string) || !(value is Address))
+            if (!(value is string) && !(value is Address))
             {
                 throw new ArgumentException("response expression must evaluate to a String or Address");
             }
@@ -362,7 +387,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             return replyTo;
         }
 
-        private void AsyncSuccess(InvocationResult resultArg, Message request, IModel channel, object source, object deferredResult)
+        private void AsyncSuccess(InvocationResult resultArg, IMessage request, RC.IModel channel, object source, object deferredResult)
         {
             if (deferredResult == null)
             {
@@ -391,41 +416,43 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             }
         }
 
-        private void BasicAck(Message request, IModel channel)
+        private void BasicAck(IMessage request, RC.IModel channel)
         {
+            var tag = request.Headers.DeliveryTag();
+            var deliveryTag = tag.HasValue ? tag.Value : 0;
             try
             {
-                channel.BasicAck(request.MessageProperties.DeliveryTag.Value, false);
+                channel.BasicAck(deliveryTag, false);
             }
-            catch (IOException e)
+            catch (Exception e)
             {
-                _logger?.LogError("Failed to ack message", e);
+                _logger?.LogError(e, "Failed to ack message");
             }
         }
 
-        private void AsyncFailure(Message request, IModel channel, Exception exception)
+        private void AsyncFailure(IMessage request, RC.IModel channel, Exception exception)
         {
-            _logger?.LogError("Future or Mono was completed with an exception for " + request, exception);
+            _logger?.LogError(exception, "Async method was completed with an exception for {request} ", request);
             try
             {
-                channel.BasicNack(request.MessageProperties.DeliveryTag.Value, false, ContainerUtils.ShouldRequeue(DefaultRequeueRejected, exception, _logger));
+                channel.BasicNack(request.Headers.DeliveryTag().Value, false, ContainerUtils.ShouldRequeue(DefaultRequeueRejected, exception, _logger));
             }
-            catch (IOException e)
+            catch (Exception e)
             {
-                _logger?.LogError("Failed to nack message", e);
+                _logger?.LogError(e, "Failed to nack message");
             }
         }
 
         protected class ReplyExpressionRoot
         {
-            public ReplyExpressionRoot(Message request, object source, object result)
+            public ReplyExpressionRoot(IMessage request, object source, object result)
             {
                 Request = request;
                 Source = source;
                 Result = result;
             }
 
-            public Message Request { get; }
+            public IMessage Request { get; }
 
             public object Source { get; }
 

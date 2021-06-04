@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\..\versions.props" />
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.0;</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1;</TargetFrameworks>
     <RootNamespace>Steeltoe.Management.Endpoint</RootNamespace>
     <Description>Steeltoe management endpoints</Description>
     <PackageTags>actuator;management;monitoring;Spring Cloud;</PackageTags>
   </PropertyGroup>
+
+  <Import Project="..\..\..\..\versions.props" />
   <Import Project="..\..\..\..\sharedproject.props" />
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -13,18 +14,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.61701" />
+    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.221401" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="$(ExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(ExtensionsVersion)" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(ExtensionsVersion)" />
     <PackageReference Include="Microsoft.DiaSymReader" Version="$(SymReaderVersion)" />
     <PackageReference Include="Microsoft.DiaSymReader.PortablePdb" Version="$(SymReaderPortableVersion)" />
-    <PackageReference Include="Newtonsoft.Json" Version="$(JsonNetVersion)" />
-    <PackageReference Include="OpenTelemetry.Exporter.Prometheus" Version="$(OpenTelemetryVersion)" />
   
     <PackageReference Include="System.IO.FileSystem.DriveInfo" Version="$(DriveInfoVersion)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(CI_BUILD)' == ''">
+  <ItemGroup>
     <ProjectReference Include="..\..\..\Common\src\Abstractions\Steeltoe.Common.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Common\src\Common.Http\Steeltoe.Common.Http.csproj" />
     <ProjectReference Include="..\..\..\Configuration\src\Abstractions\Steeltoe.Extensions.Configuration.Abstractions.csproj" />
@@ -33,13 +33,4 @@
     <ProjectReference Include="..\Diagnostics\Steeltoe.Management.Diagnostics.csproj" />
     <ProjectReference Include="..\OpenTelemetryBase\Steeltoe.Management.OpenTelemetryBase.csproj" />
   </ItemGroup>
-  
-  <ItemGroup Condition="'$(CI_BUILD)' == 'True'">
-    <PackageReference Include="Steeltoe.Common.Abstractions" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Common.Http" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Extensions.Logging.DynamicLogger" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Management.Abstractions" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Management.Diagnostics" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-    <PackageReference Include="Steeltoe.Management.OpenTelemetryBase" Version="$(SteeltoeVersion)$(SteeltoeVersionSuffix)" />
-  </ItemGroup>
-</Project>
+  </Project>

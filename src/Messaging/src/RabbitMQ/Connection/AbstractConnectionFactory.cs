@@ -1,70 +1,62 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Steeltoe.Common.Net;
-using Steeltoe.Messaging.Rabbit.Support;
+using Steeltoe.Messaging.RabbitMQ.Support;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
+using RC = RabbitMQ.Client;
 
-namespace Steeltoe.Messaging.Rabbit.Connection
+namespace Steeltoe.Messaging.RabbitMQ.Connection
 {
 #pragma warning disable S3881 // "IDisposable" should be implemented correctly
     public abstract class AbstractConnectionFactory : IConnectionFactory
-#pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
         public const int DEFAULT_CLOSE_TIMEOUT = 30000;
+        protected readonly ILoggerFactory _loggerFactory;
         protected readonly ILogger _logger;
-        protected readonly RabbitMQ.Client.IConnectionFactory _rabbitConnectionFactory;
+        protected readonly RC.IConnectionFactory _rabbitConnectionFactory;
 
         private const string PUBLISHER_SUFFIX = ".publisher";
-        private readonly CompositeConnectionListener _connectionListener = new CompositeConnectionListener();
-        private readonly CompositeChannelListener _channelListener = new CompositeChannelListener();
+        private readonly CompositeConnectionListener _connectionListener;
+        private readonly CompositeChannelListener _channelListener;
         private readonly Random _random = new Random();
         private int _defaultConnectionNameStrategyCounter;
 
         protected AbstractConnectionFactory(
-            RabbitMQ.Client.IConnectionFactory rabbitConnectionFactory,
-            ILogger logger = null)
-            : this(rabbitConnectionFactory, null, logger)
+            RC.IConnectionFactory rabbitConnectionFactory,
+            ILoggerFactory loggerFactory = null)
+            : this(rabbitConnectionFactory, null, loggerFactory)
         {
         }
 
         protected AbstractConnectionFactory(
-            RabbitMQ.Client.IConnectionFactory rabbitConnectionFactory,
+            RC.IConnectionFactory rabbitConnectionFactory,
             AbstractConnectionFactory publisherConnectionFactory,
-            ILogger logger = null)
+            ILoggerFactory loggerFactory = null)
         {
             if (rabbitConnectionFactory == null)
             {
                 throw new ArgumentNullException(nameof(rabbitConnectionFactory));
             }
 
+            _loggerFactory = loggerFactory;
+            _logger = _loggerFactory?.CreateLogger(GetType());
             _rabbitConnectionFactory = rabbitConnectionFactory;
+            _connectionListener = new CompositeConnectionListener(_loggerFactory?.CreateLogger<CompositeConnectionListener>());
+            _channelListener = new CompositeChannelListener(_loggerFactory?.CreateLogger<CompositeConnectionListener>());
             PublisherConnectionFactory = publisherConnectionFactory;
-            _logger = logger;
-            RecoveryListener = new DefaultRecoveryListener(logger);
-            BlockedListener = new DefaultBlockedListener(logger);
-            Name = GetType().Name + "@" + GetHashCode();
+            RecoveryListener = new DefaultRecoveryListener(_loggerFactory?.CreateLogger<DefaultRecoveryListener>());
+            BlockedListener = new DefaultBlockedListener(_loggerFactory?.CreateLogger<DefaultBlockedListener>());
+            ServiceName = GetType().Name + "@" + GetHashCode();
         }
 
-        public virtual RabbitMQ.Client.ConnectionFactory RabbitConnectionFactory => _rabbitConnectionFactory as RabbitMQ.Client.ConnectionFactory;
+        public virtual RC.ConnectionFactory RabbitConnectionFactory => _rabbitConnectionFactory as RC.ConnectionFactory;
 
         public virtual string Username
         {
@@ -116,11 +108,11 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
         public virtual int CloseTimeout { get; set; } = DEFAULT_CLOSE_TIMEOUT;
 
-        public virtual string Name { get; set; }
+        public virtual string ServiceName { get; set; }
 
         public virtual bool ShuffleAddresses { get; set; }
 
-        public virtual List<AmqpTcpEndpoint> Addresses { get; set; }
+        public virtual List<RC.AmqpTcpEndpoint> Addresses { get; set; }
 
         public virtual bool HasPublisherConnectionFactory => PublisherConnectionFactory != null;
 
@@ -214,7 +206,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
         {
             if (!string.IsNullOrEmpty(addresses))
             {
-                var endpoints = AmqpTcpEndpoint.ParseMultiple(addresses);
+                var endpoints = RC.AmqpTcpEndpoint.ParseMultiple(addresses);
                 if (endpoints.Length > 0)
                 {
                     Addresses = endpoints.ToList();
@@ -248,10 +240,15 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
         public override string ToString()
         {
-            return Name;
+            return ServiceName;
         }
 
-        protected AbstractConnectionFactory AbstractPublisherConnectionFactory
+        protected internal virtual void ConnectionShutdownCompleted(object sender, RC.ShutdownEventArgs args)
+        {
+            ConnectionListener.OnShutDown(args);
+        }
+
+        protected virtual AbstractConnectionFactory AbstractPublisherConnectionFactory
         {
             get
             {
@@ -267,9 +264,9 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
                 var rabbitConnection = Connect(connectionName);
 
-                var connection = new SimpleConnection(rabbitConnection, CloseTimeout, _logger);
+                var connection = new SimpleConnection(rabbitConnection, CloseTimeout, _loggerFactory?.CreateLogger<SimpleConnection>());
 
-                _logger?.LogInformation("Created new connection: " + connectionName + "/" + connection);
+                _logger?.LogInformation("Created new connection: {connectionName}/{connection}", connectionName, connection);
 
                 if (rabbitConnection != null && RecoveryListener != null)
                 {
@@ -283,9 +280,14 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                     rabbitConnection.ConnectionUnblocked += BlockedListener.HandleUnblocked;
                 }
 
+                if (rabbitConnection != null)
+                {
+                    rabbitConnection.ConnectionShutdown += ConnectionShutdownCompleted;
+                }
+
                 return connection;
             }
-            catch (Exception e) when (e is IOException || e is TimeoutException)
+            catch (Exception e)
             {
                 throw RabbitExceptionTranslator.ConvertRabbitAccessException(e);
             }
@@ -299,7 +301,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                 var inetUtils = new InetUtils(new InetOptions(), _logger);
                 var hostInfo = inetUtils.FindFirstNonLoopbackHostInfo();
                 temp = hostInfo.Hostname;
-                _logger?.LogDebug("Using hostname [" + temp + "] for hostname.");
+                _logger?.LogDebug("Using hostname [{name}] for hostname.", temp);
             }
             catch (Exception e)
             {
@@ -312,12 +314,12 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
         protected virtual string ObtainNewConnectionName()
         {
-            return Name + ":" + Interlocked.Increment(ref _defaultConnectionNameStrategyCounter) + PUBLISHER_SUFFIX;
+            return ServiceName + ":" + Interlocked.Increment(ref _defaultConnectionNameStrategyCounter) + PUBLISHER_SUFFIX;
         }
 
-        private RabbitMQ.Client.IConnection Connect(string connectionName)
+        private RC.IConnection Connect(string connectionName)
         {
-            RabbitMQ.Client.IConnection rabbitConnection;
+            RC.IConnection rabbitConnection;
             if (Addresses != null)
             {
                 var addressesToConnect = Addresses;
@@ -328,13 +330,13 @@ namespace Steeltoe.Messaging.Rabbit.Connection
                     addressesToConnect = list.ToList();
                 }
 
-                _logger?.LogInformation("Attempting to connect to: " + addressesToConnect);
+                _logger?.LogInformation("Attempting to connect to: {address} ", addressesToConnect);
 
-                rabbitConnection = _rabbitConnectionFactory.CreateConnection(addressesToConnect, connectionName);
+                rabbitConnection = _rabbitConnectionFactory.CreateConnection(addressesToConnect);
             }
             else
             {
-                _logger?.LogInformation("Attempting to connect to: " + Host + ":" + Port);
+                _logger?.LogInformation("Attempting to connect to: {host}:{port}", Host, Port);
                 rabbitConnection = _rabbitConnectionFactory.CreateConnection(connectionName);
             }
 
@@ -369,7 +371,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
             public void HandleUnblocked(object sender, EventArgs args)
             {
-                _logger?.LogInformation("Connection unblocked");
+                _logger?.LogInformation("Connection unblocked: {args}", args.ToString());
             }
         }
 
@@ -384,7 +386,7 @@ namespace Steeltoe.Messaging.Rabbit.Connection
 
             public void HandleConnectionRecoveryError(object sender, ConnectionRecoveryErrorEventArgs error)
             {
-                _logger?.LogDebug("Connection recovery failed: " + error.Exception);
+                _logger?.LogDebug(error.Exception, "Connection recovery failed");
             }
 
             public void HandleRecoverySucceeded(object sender, EventArgs e)
@@ -393,4 +395,5 @@ namespace Steeltoe.Messaging.Rabbit.Connection
             }
         }
     }
+#pragma warning restore S3881 // "IDisposable" should be implemented correctly
 }

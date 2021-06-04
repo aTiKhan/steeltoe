@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Linq;
@@ -20,24 +10,24 @@ namespace Steeltoe.Connector.Services
 {
     public class UriInfo
     {
-        private readonly char[] questionMark = new char[] { '?' };
+        private readonly char[] _questionMark = new char[] { '?' };
 
-        private readonly char[] colon = new char[] { ':' };
+        private readonly char[] _colon = new char[] { ':' };
 
         public UriInfo(string scheme, string host, int port, string username, string password, string path = null, string query = null)
         {
             Scheme = scheme;
             Host = host;
             Port = port;
-            UserName = username;
-            Password = password;
+            UserName = WebUtility.UrlEncode(username);
+            Password = WebUtility.UrlEncode(password);
             Path = path;
             Query = query;
 
             UriString = MakeUri(scheme, host, port, username, password, path, query).ToString();
         }
 
-        public UriInfo(string uristring, bool urlEncodedCredentials = false)
+        public UriInfo(string uristring)
         {
             var uri = MakeUri(uristring);
             if (uri != null)
@@ -53,17 +43,8 @@ namespace Steeltoe.Connector.Services
                 Query = GetQuery(uri.PathAndQuery);
 
                 var userinfo = GetUserInfo(uri.UserInfo);
-
-                if (urlEncodedCredentials)
-                {
-                    UserName = WebUtility.UrlDecode(userinfo[0]);
-                    Password = WebUtility.UrlDecode(userinfo[1]);
-                }
-                else
-                {
-                    UserName = userinfo[0];
-                    Password = userinfo[1];
-                }
+                UserName = userinfo[0];
+                Password = userinfo[1];
             }
 
             UriString = uristring;
@@ -85,8 +66,8 @@ namespace Steeltoe.Connector.Services
                 Query = GetQuery(uri.PathAndQuery);
             }
 
-            UserName = username;
-            Password = password;
+            UserName = WebUtility.UrlEncode(username);
+            Password = WebUtility.UrlEncode(password);
             UriString = uristring;
         }
 
@@ -108,18 +89,9 @@ namespace Steeltoe.Connector.Services
 
         public string UriString { get; internal protected set; }
 
-        public Uri Uri
-        {
-            get
-            {
-                return MakeUri(UriString);
-            }
-        }
+        public Uri Uri => MakeUri(UriString);
 
-        public override string ToString()
-        {
-            return UriString;
-        }
+        public override string ToString() => UriString;
 
         protected internal Uri MakeUri(string scheme, string host, int port, string username, string password, string path, string query)
         {
@@ -133,8 +105,8 @@ namespace Steeltoe.Connector.Services
                     Scheme = scheme,
                     Host = host,
                     Port = port,
-                    UserName = username,
-                    Password = password,
+                    UserName = WebUtility.UrlEncode(username),
+                    Password = WebUtility.UrlEncode(password),
                     Path = cleanedPath
                 };
                 return builder.Uri;
@@ -214,7 +186,7 @@ namespace Steeltoe.Connector.Services
 
                 if (firstAmp > 0)
                 {
-                    uriString = uriString.Substring(0, firstAmp) + questionMark[0] + uriString.Substring(firstAmp + 1, uriString.Length - firstAmp - 1);
+                    uriString = uriString.Substring(0, firstAmp) + _questionMark[0] + uriString.Substring(firstAmp + 1, uriString.Length - firstAmp - 1);
                 }
             }
         }
@@ -226,7 +198,7 @@ namespace Steeltoe.Connector.Services
                 return null;
             }
 
-            var split = pathAndQuery.Split(questionMark);
+            var split = pathAndQuery.Split(_questionMark);
             if (split.Length == 0)
             {
                 return null;
@@ -242,7 +214,7 @@ namespace Steeltoe.Connector.Services
                 return null;
             }
 
-            var split = pathAndQuery.Split(questionMark);
+            var split = pathAndQuery.Split(_questionMark);
             if (split.Length <= 1)
             {
                 return null;
@@ -258,7 +230,7 @@ namespace Steeltoe.Connector.Services
                 return new string[2] { null, null };
             }
 
-            var split = userPass.Split(colon);
+            var split = userPass.Split(_colon);
             if (split.Length != 2)
             {
                 throw new ArgumentException(

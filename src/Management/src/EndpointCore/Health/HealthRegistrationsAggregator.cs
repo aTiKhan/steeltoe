@@ -1,60 +1,53 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Steeltoe.Common.HealthChecks;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using HealthCheckResult = Steeltoe.Common.HealthChecks.HealthCheckResult;
 
 namespace Steeltoe.Management.Endpoint.Health
 {
     public class HealthRegistrationsAggregator : DefaultHealthAggregator, IHealthRegistrationsAggregator
     {
-        public HealthCheckResult Aggregate(IList<IHealthContributor> contributors, IOptionsMonitor<HealthCheckServiceOptions> healthServiceOptions, IServiceProvider serviceProvider)
+        public HealthCheckResult Aggregate(IList<IHealthContributor> contributors, ICollection<HealthCheckRegistration> healthCheckRegistrations, IServiceProvider serviceProvider)
         {
-            var result = Aggregate(contributors);
+            // TODO: consider re-writing to run this call to base aggregator in parallel with below checks
+            // get results from DefaultHealthAggregator first
+            var aggregatorResult = Aggregate(contributors);
 
-            if (healthServiceOptions == null)
+            // if there aren't any MSFT interfaced health checks, return now
+            if (healthCheckRegistrations == null)
             {
-                return result;
+                return aggregatorResult;
             }
 
-            var contributorIds = contributors.Select(x => x.Id);
-            foreach (var registration in healthServiceOptions.CurrentValue.Registrations)
+            var healthChecks = new ConcurrentDictionary<string, HealthCheckResult>();
+            var keyList = new ConcurrentBag<string>(contributors.Select(x => x.Id));
+
+            // run all HealthCheckRegistration checks in parallel
+            Parallel.ForEach(healthCheckRegistrations, registration =>
             {
-                HealthCheckResult h = registration.HealthCheck(serviceProvider).GetAwaiter().GetResult();
-
-                if (h.Status > result.Status)
+                var contributorName = GetKey(keyList, registration.Name);
+                HealthCheckResult healthCheckResult = null;
+                try
                 {
-                    result.Status = h.Status;
+                    healthCheckResult = registration.HealthCheck(serviceProvider).GetAwaiter().GetResult();
+                }
+                catch (Exception)
+                {
+                    healthCheckResult = new HealthCheckResult();
                 }
 
-                var key = GetKey(result, registration.Name);
-                result.Details.Add(key, h);
-                var possibleDuplicate = contributorIds.FirstOrDefault(id => id.IndexOf(registration.Name, StringComparison.OrdinalIgnoreCase) >= 0);
-                if (!string.IsNullOrEmpty(possibleDuplicate))
-                {
-                    var logger = serviceProvider.GetService(typeof(ILogger<HealthRegistrationsAggregator>)) as ILogger;
-                    logger?.LogDebug($"Possible duplicate HealthCheck registation {registration.Name}, {possibleDuplicate} ");
-                }
-            }
+                healthChecks.TryAdd(contributorName, healthCheckResult);
+            });
 
-            return result;
+            return AddChecksSetStatus(aggregatorResult, healthChecks);
         }
     }
 }

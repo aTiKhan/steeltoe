@@ -1,29 +1,26 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.Common.Contexts;
 using Steeltoe.Messaging.Handler.Attributes.Support;
 using System;
 using System.Collections.Generic;
 
-namespace Steeltoe.Messaging.Rabbit.Listener
+namespace Steeltoe.Messaging.RabbitMQ.Listener
 {
-    public class RabbitListenerEndpointRegistrar
+    public class RabbitListenerEndpointRegistrar : IRabbitListenerEndpointRegistrar
     {
-        private readonly List<AmqpListenerEndpointDescriptor> _endpointDescriptors = new List<AmqpListenerEndpointDescriptor>();
+        public const string DEFAULT_SERVICE_NAME = nameof(RabbitListenerEndpointRegistrar);
 
-        public RabbitListenerEndpointRegistry EndpointRegistry { get; set; }
+        private readonly List<RabbitListenerEndpointDescriptor> _endpointDescriptors = new List<RabbitListenerEndpointDescriptor>();
+
+        public RabbitListenerEndpointRegistrar(IMessageHandlerMethodFactory messageHandlerMethodFactory = null)
+        {
+            MessageHandlerMethodFactory = messageHandlerMethodFactory;
+        }
+
+        public IRabbitListenerEndpointRegistry EndpointRegistry { get; set; }
 
         public IMessageHandlerMethodFactory MessageHandlerMethodFactory { get; set; }
 
@@ -34,6 +31,8 @@ namespace Steeltoe.Messaging.Rabbit.Listener
         public IApplicationContext ApplicationContext { get; set; }
 
         public bool StartImmediately { get; set; }
+
+        public string ServiceName { get; set; } = DEFAULT_SERVICE_NAME;
 
         public void Initialize()
         {
@@ -58,7 +57,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener
             }
 
             // Factory may be null, we defer the resolution right before actually creating the container
-            var descriptor = new AmqpListenerEndpointDescriptor(endpoint, factory);
+            var descriptor = new RabbitListenerEndpointDescriptor(endpoint, factory);
             lock (_endpointDescriptors)
             {
                 if (StartImmediately)
@@ -95,7 +94,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener
             }
         }
 
-        private IRabbitListenerContainerFactory ResolveContainerFactory(AmqpListenerEndpointDescriptor descriptor)
+        private IRabbitListenerContainerFactory ResolveContainerFactory(RabbitListenerEndpointDescriptor descriptor)
         {
             if (descriptor.ContainerFactory != null)
             {
@@ -121,9 +120,9 @@ namespace Steeltoe.Messaging.Rabbit.Listener
             }
         }
 
-        private class AmqpListenerEndpointDescriptor
+        private class RabbitListenerEndpointDescriptor
         {
-            public AmqpListenerEndpointDescriptor(IRabbitListenerEndpoint endpoint, IRabbitListenerContainerFactory containerFactory)
+            public RabbitListenerEndpointDescriptor(IRabbitListenerEndpoint endpoint, IRabbitListenerContainerFactory containerFactory)
             {
                 Endpoint = endpoint;
                 ContainerFactory = containerFactory;

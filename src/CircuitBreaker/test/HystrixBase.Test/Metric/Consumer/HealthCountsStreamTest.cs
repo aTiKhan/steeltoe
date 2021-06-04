@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Exceptions;
 using Steeltoe.CircuitBreaker.Hystrix.Metric.Test;
@@ -30,10 +20,10 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 {
     public class HealthCountsStreamTest : CommandStreamTest, IDisposable
     {
-        private static IHystrixCommandGroupKey groupKey = HystrixCommandGroupKeyDefault.AsKey("HealthCounts");
+        private static readonly IHystrixCommandGroupKey GroupKey = HystrixCommandGroupKeyDefault.AsKey("HealthCounts");
+        private readonly ITestOutputHelper output;
         private HealthCountsStream stream;
         private IDisposable latchSubscription;
-        private ITestOutputHelper output;
 
         private class LatchedObserver : TestObserverBase<HealthCounts>
         {
@@ -62,9 +52,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestEmptyStreamProducesZeros()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-A");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-A");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
             latchSubscription = stream.Observe().Subscribe(observer);
@@ -76,15 +66,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestSingleSuccess()
+        public async Task TestSingleSuccess()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-B");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-B");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            Command cmd = Command.From(groupKey, key, HystrixEventType.SUCCESS, 20);
+            var cmd = Command.From(GroupKey, key, HystrixEventType.SUCCESS, 20);
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
 
@@ -96,14 +86,14 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestSingleFailure()
+        public async Task TestSingleFailure()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-C");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-C");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
-            Command cmd = Command.From(groupKey, key, HystrixEventType.FAILURE, 0);
+            var cmd = Command.From(GroupKey, key, HystrixEventType.FAILURE, 0);
 
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
@@ -117,15 +107,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
         }
 
         [Fact]
-        public async void TestSingleTimeout()
+        public async Task TestSingleTimeout()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-D");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-D");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            Command cmd = Command.From(groupKey, key, HystrixEventType.TIMEOUT);  // Timeout 1000
+            var cmd = Command.From(GroupKey, key, HystrixEventType.TIMEOUT);  // Timeout 1000
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
 
@@ -139,15 +129,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestSingleBadRequest()
+        public async Task TestSingleBadRequest()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-E");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-E");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            Command cmd = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.BAD_REQUEST);
+            var cmd = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.BAD_REQUEST);
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
 
@@ -161,17 +151,17 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestRequestFromCache()
+        public async Task TestRequestFromCache()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-F");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-F");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            Command cmd1 = Command.From(groupKey, key, HystrixEventType.SUCCESS, 0);
-            Command cmd2 = Command.From(groupKey, key, HystrixEventType.RESPONSE_FROM_CACHE);
-            Command cmd3 = Command.From(groupKey, key, HystrixEventType.RESPONSE_FROM_CACHE);
+            var cmd1 = Command.From(GroupKey, key, HystrixEventType.SUCCESS, 0);
+            var cmd2 = Command.From(GroupKey, key, HystrixEventType.RESPONSE_FROM_CACHE);
+            var cmd3 = Command.From(GroupKey, key, HystrixEventType.RESPONSE_FROM_CACHE);
 
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
@@ -187,19 +177,19 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestShortCircuited()
+        public async Task TestShortCircuited()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-G");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-G");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            Command failure1 = Command.From(groupKey, key, HystrixEventType.FAILURE, 0);
-            Command failure2 = Command.From(groupKey, key, HystrixEventType.FAILURE, 0);
-            Command failure3 = Command.From(groupKey, key, HystrixEventType.FAILURE, 0);
-            Command shortCircuit1 = Command.From(groupKey, key, HystrixEventType.SUCCESS);
-            Command shortCircuit2 = Command.From(groupKey, key, HystrixEventType.SUCCESS);
+            var failure1 = Command.From(GroupKey, key, HystrixEventType.FAILURE, 0);
+            var failure2 = Command.From(GroupKey, key, HystrixEventType.FAILURE, 0);
+            var failure3 = Command.From(GroupKey, key, HystrixEventType.FAILURE, 0);
+            var shortCircuit1 = Command.From(GroupKey, key, HystrixEventType.SUCCESS);
+            var shortCircuit2 = Command.From(GroupKey, key, HystrixEventType.SUCCESS);
 
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
@@ -228,22 +218,22 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestSemaphoreRejected()
+        public async Task TestSemaphoreRejected()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-H");
-            List<Command> saturators = new List<Command>();
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-H");
+            var saturators = new List<Command>();
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            for (int i = 0; i < 10; i++)
+            for (var i = 0; i < 10; i++)
             {
-                saturators.Add(Command.From(groupKey, key, HystrixEventType.SUCCESS, 500, ExecutionIsolationStrategy.SEMAPHORE));
+                saturators.Add(Command.From(GroupKey, key, HystrixEventType.SUCCESS, 500, ExecutionIsolationStrategy.SEMAPHORE));
             }
 
-            Command rejected1 = Command.From(groupKey, key, HystrixEventType.SUCCESS, 0, ExecutionIsolationStrategy.SEMAPHORE);
-            Command rejected2 = Command.From(groupKey, key, HystrixEventType.SUCCESS, 0, ExecutionIsolationStrategy.SEMAPHORE);
+            var rejected1 = Command.From(GroupKey, key, HystrixEventType.SUCCESS, 0, ExecutionIsolationStrategy.SEMAPHORE);
+            var rejected2 = Command.From(GroupKey, key, HystrixEventType.SUCCESS, 0, ExecutionIsolationStrategy.SEMAPHORE);
 
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
@@ -251,8 +241,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
             // 10 commands will saturate semaphore when called from different threads.
             // submit 2 more requests and they should be SEMAPHORE_REJECTED
             // should see 10 SUCCESSes, 2 SEMAPHORE_REJECTED and 2 FALLBACK_SUCCESSes
-            List<Task> tasks = new List<Task>();
-            foreach (Command saturator in saturators)
+            var tasks = new List<Task>();
+            foreach (var saturator in saturators)
             {
                 tasks.Add(Task.Run(() => saturator.Execute()));
             }
@@ -276,20 +266,20 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestThreadPoolRejected()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-I");
-            List<Command> saturators = new List<Command>();
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-I");
+            var saturators = new List<Command>();
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            for (int i = 0; i < 10; i++)
+            for (var i = 0; i < 10; i++)
             {
-                saturators.Add(CommandStreamTest.Command.From(groupKey, key, HystrixEventType.SUCCESS, 400));
+                saturators.Add(CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.SUCCESS, 400));
             }
 
-            Command rejected1 = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.SUCCESS, 0);
-            Command rejected2 = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.SUCCESS, 0);
+            var rejected1 = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.SUCCESS, 0);
+            var rejected2 = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.SUCCESS, 0);
 
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
@@ -297,8 +287,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
             // 10 commands will saturate threadpools when called concurrently.
             // submit 2 more requests and they should be THREADPOOL_REJECTED
             // should see 10 SUCCESSes, 2 THREADPOOL_REJECTED and 2 FALLBACK_SUCCESSes
-            List<Task> tasks = new List<Task>();
-            foreach (Command saturator in saturators)
+            var tasks = new List<Task>();
+            foreach (var saturator in saturators)
             {
                 tasks.Add(saturator.ExecuteAsync());
             }
@@ -317,15 +307,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestFallbackFailure()
+        public async Task TestFallbackFailure()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-J");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-J");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            Command cmd = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.FAILURE, 20, HystrixEventType.FALLBACK_FAILURE);
+            var cmd = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.FAILURE, 20, HystrixEventType.FALLBACK_FAILURE);
 
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
@@ -339,14 +329,14 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestFallbackMissing()
+        public async Task TestFallbackMissing()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-K");
-            CountdownEvent latch = new CountdownEvent(1);
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-K");
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            Command cmd = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.FAILURE, 20, HystrixEventType.FALLBACK_MISSING);
+            var cmd = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.FAILURE, 20, HystrixEventType.FALLBACK_MISSING);
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
 
@@ -359,29 +349,29 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestFallbackRejection()
+        public async Task TestFallbackRejection()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-L");
-            List<Command> fallbackSaturators = new List<Command>();
-            CountdownEvent latch = new CountdownEvent(1);
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-L");
+            var fallbackSaturators = new List<Command>();
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            for (int i = 0; i < 5; i++)
+            for (var i = 0; i < 5; i++)
             {
-                fallbackSaturators.Add(CommandStreamTest.Command.From(groupKey, key, HystrixEventType.FAILURE, 0, HystrixEventType.FALLBACK_SUCCESS, 500));
+                fallbackSaturators.Add(CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.FAILURE, 0, HystrixEventType.FALLBACK_SUCCESS, 500));
             }
 
-            Command rejection1 = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.FAILURE, 0, HystrixEventType.FALLBACK_SUCCESS, 0);
-            Command rejection2 = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.FAILURE, 0, HystrixEventType.FALLBACK_SUCCESS, 0);
+            var rejection1 = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.FAILURE, 0, HystrixEventType.FALLBACK_SUCCESS, 0);
+            var rejection2 = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.FAILURE, 0, HystrixEventType.FALLBACK_SUCCESS, 0);
 
             latchSubscription = stream.Observe().Subscribe(observer);
             Assert.True(Time.WaitUntil(() => observer.StreamRunning, 1000), "Stream failed to start");
 
             // fallback semaphore size is 5.  So let 5 commands saturate that semaphore, then
             // let 2 more commands go to fallback.  they should get rejected by the fallback-semaphore
-            List<Task> tasks = new List<Task>();
-            foreach (Command saturator in fallbackSaturators)
+            var tasks = new List<Task>();
+            foreach (var saturator in fallbackSaturators)
             {
                 tasks.Add(saturator.ExecuteAsync());
             }
@@ -402,16 +392,16 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
 
         [Fact]
         [Trait("Category", "FlakyOnHostedAgents")]
-        public async void TestMultipleEventsOverTimeGetStoredAndAgeOut()
+        public async Task TestMultipleEventsOverTimeGetStoredAndAgeOut()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-M");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-M");
 
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
             var observer = new LatchedObserver(output, latch);
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            Command cmd1 = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.SUCCESS, 20);
-            Command cmd2 = CommandStreamTest.Command.From(groupKey, key, HystrixEventType.FAILURE, 10);
+            var cmd1 = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.SUCCESS, 20);
+            var cmd2 = CommandStreamTest.Command.From(GroupKey, key, HystrixEventType.FAILURE, 10);
 
             // by doing a take(30), we ensure that all rolling counts go back to 0
             latchSubscription = stream.Observe().Take(30 + LatchedObserver.STABLE_TICK_COUNT).Subscribe(observer);
@@ -430,28 +420,28 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
         [Trait("Category", "FlakyOnHostedAgents")]
         public void TestSharedSourceStream()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-N");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-N");
 
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            CountdownEvent latch = new CountdownEvent(1);
-            AtomicBoolean allEqual = new AtomicBoolean(false);
+            var latch = new CountdownEvent(1);
+            var allEqual = new AtomicBoolean(false);
 
-            IObservable<HealthCounts> o1 = stream
+            var o1 = stream
                     .Observe()
                     .Take(10)
                     .ObserveOn(TaskPoolScheduler.Default);
 
-            IObservable<HealthCounts> o2 = stream
+            var o2 = stream
                     .Observe()
                     .Take(10)
                     .ObserveOn(TaskPoolScheduler.Default);
 
-            IObservable<bool> zipped = Observable.Zip(o1, o2, (healthCounts, healthCounts2) =>
+            var zipped = Observable.Zip(o1, o2, (healthCounts, healthCounts2) =>
                     {
                         return healthCounts == healthCounts2;  // we want object equality
                     });
-            IObservable<bool> reduced = zipped.Aggregate(true, (a, b) =>
+            var reduced = zipped.Aggregate(true, (a, b) =>
                     {
                         return a && b;
                     }).Select(n => n);
@@ -474,9 +464,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
                     latch.SignalEx();
                 });
 
-            for (int i = 0; i < 10; i++)
+            for (var i = 0; i < 10; i++)
             {
-                HystrixCommand<int> cmd = Command.From(groupKey, key, HystrixEventType.SUCCESS, 20);
+                HystrixCommand<int> cmd = Command.From(GroupKey, key, HystrixEventType.SUCCESS, 20);
                 cmd.Execute();
             }
 
@@ -491,15 +481,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
         [Fact]
         public void TestTwoSubscribersOneUnsubscribes()
         {
-            IHystrixCommandKey key = HystrixCommandKeyDefault.AsKey("CMD-Health-O");
+            var key = HystrixCommandKeyDefault.AsKey("CMD-Health-O");
             stream = HealthCountsStream.GetInstance(key, 10, 100);
 
-            CountdownEvent latch1 = new CountdownEvent(1);
-            CountdownEvent latch2 = new CountdownEvent(1);
-            AtomicInteger healthCounts1 = new AtomicInteger(0);
-            AtomicInteger healthCounts2 = new AtomicInteger(0);
+            var latch1 = new CountdownEvent(1);
+            var latch2 = new CountdownEvent(1);
+            var healthCounts1 = new AtomicInteger(0);
+            var healthCounts2 = new AtomicInteger(0);
 
-            IDisposable s1 = stream
+            var s1 = stream
                     .Observe()
                     .Take(10)
                     .ObserveOn(TaskPoolScheduler.Default)
@@ -523,7 +513,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
                         output.WriteLine(Time.CurrentTimeMillis + " : " + Thread.CurrentThread.ManagedThreadId + " : Health 1 OnCompleted");
                         latch1.SignalEx();
                     });
-            IDisposable s2 = stream
+            var s2 = stream
                     .Observe()
                     .Take(10)
                     .ObserveOn(TaskPoolScheduler.Default)
@@ -549,9 +539,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer.Test
                         });
 
             // execute 5 commands, then unsubscribe from first stream. then execute the rest
-            for (int i = 0; i < 10; i++)
+            for (var i = 0; i < 10; i++)
             {
-                HystrixCommand<int> cmd = Command.From(groupKey, key, HystrixEventType.SUCCESS, 20);
+                HystrixCommand<int> cmd = Command.From(GroupKey, key, HystrixEventType.SUCCESS, 20);
                 cmd.Execute();
                 if (i == 5)
                 {

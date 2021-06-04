@@ -1,17 +1,8 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
+using Steeltoe.Common.Contexts;
 using Steeltoe.Integration.Channel;
 using Steeltoe.Messaging;
 using Steeltoe.Stream.Config;
@@ -23,14 +14,14 @@ namespace Steeltoe.Stream.TestBinder
 {
     public class TestChannelBinderProvisioner : IProvisioningProvider
     {
-        private readonly Dictionary<string, ISubscribableChannel> provisionedDestinations = new Dictionary<string, ISubscribableChannel>();
-        private readonly IServiceProvider serviceProvider;
+        private readonly Dictionary<string, ISubscribableChannel> _provisionedDestinations = new Dictionary<string, ISubscribableChannel>();
+        private readonly IApplicationContext _context;
 
-        public TestChannelBinderProvisioner(IServiceProvider serviceProvider, InputDestination inputDestination, OutputDestination outputDestination)
+        public TestChannelBinderProvisioner(IApplicationContext context, InputDestination inputDestination, OutputDestination outputDestination)
         {
             InputDestination = inputDestination;
             OutputDestination = outputDestination;
-            this.serviceProvider = serviceProvider;
+            _context = context;
         }
 
         public InputDestination InputDestination { get; }
@@ -58,20 +49,20 @@ namespace Steeltoe.Stream.TestBinder
         private ISubscribableChannel ProvisionDestination(string name, bool pubSub)
         {
             var destinationName = name + ".destination";
-            provisionedDestinations.TryGetValue(destinationName, out var destination);
+            _provisionedDestinations.TryGetValue(destinationName, out var destination);
             if (destination == null)
             {
                 if (pubSub)
                 {
-                    destination = new PublishSubscribeChannel(serviceProvider);
+                    destination = new PublishSubscribeChannel(_context);
                 }
                 else
                 {
-                    destination = new DirectChannel(serviceProvider);
+                    destination = new DirectChannel(_context);
                 }
 
-                ((AbstractMessageChannel)destination).Name = destinationName;
-                provisionedDestinations.Add(destinationName, destination);
+                ((AbstractMessageChannel)destination).ServiceName = destinationName;
+                _provisionedDestinations.Add(destinationName, destination);
             }
 
             return destination;

@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -30,6 +20,7 @@ namespace Steeltoe.Common.Configuration
     {
         private const string PREFIX = "${";
         private const string SUFFIX = "}";
+        private const string SIMPLE_PREFIX = "{";
         private const string SEPARATOR = "?";
 
         /// <summary>
@@ -62,7 +53,7 @@ namespace Steeltoe.Common.Configuration
             // iterate all config entries where the value isn't null and contains both the prefix and suffix that identify placeholders
             foreach (var entry in config.AsEnumerable().Where(e => e.Value != null && e.Value.Contains(PREFIX) && e.Value.Contains(SUFFIX)))
             {
-                logger?.LogTrace("Found a property placeholder '{0}' to resolve for key '{1}", entry.Value, entry.Key);
+                logger?.LogTrace("Found a property placeholder '{placeholder}' to resolve for key '{key}", entry.Value, entry.Key);
                 resolvedValues.Add(entry.Key, ParseStringValue(entry.Value, config, visitedPlaceholders, logger, useEmptyStringIfNotFound));
             }
 
@@ -81,17 +72,22 @@ namespace Steeltoe.Common.Configuration
                 return property;
             }
 
-            StringBuilder result = new StringBuilder(property);
+            var startIndex = property.IndexOf(PREFIX);
+            if (startIndex == -1)
+            {
+                return property;
+            }
 
-            int startIndex = property.IndexOf(PREFIX);
+            var result = new StringBuilder(property);
+
             while (startIndex != -1)
             {
-                int endIndex = FindEndIndex(result, startIndex);
+                var endIndex = FindEndIndex(result, startIndex);
                 if (endIndex != -1)
                 {
-                    string placeholder = result.Substring(startIndex + PREFIX.Length, endIndex);
+                    var placeholder = result.Substring(startIndex + PREFIX.Length, endIndex);
 
-                    string originalPlaceholder = placeholder;
+                    var originalPlaceholder = placeholder;
 
                     if (!visitedPlaceHolders.Add(originalPlaceholder))
                     {
@@ -102,17 +98,17 @@ namespace Steeltoe.Common.Configuration
                     placeholder = ParseStringValue(placeholder, config, visitedPlaceHolders);
 
                     // Handle array references foo:bar[1]:baz format -> foo:bar:1:baz
-                    string lookup = placeholder.Replace('[', ':').Replace("]", string.Empty);
+                    var lookup = placeholder.Replace('[', ':').Replace("]", string.Empty);
 
                     // Now obtain the value for the fully resolved key...
-                    string propVal = config[lookup];
+                    var propVal = config[lookup];
                     if (propVal == null)
                     {
-                        int separatorIndex = placeholder.IndexOf(SEPARATOR);
+                        var separatorIndex = placeholder.IndexOf(SEPARATOR);
                         if (separatorIndex != -1)
                         {
-                            string actualPlaceholder = placeholder.Substring(0, separatorIndex);
-                            string defaultValue = placeholder.Substring(separatorIndex + SEPARATOR.Length);
+                            var actualPlaceholder = placeholder.Substring(0, separatorIndex);
+                            var defaultValue = placeholder.Substring(separatorIndex + SEPARATOR.Length);
                             propVal = config[actualPlaceholder];
                             if (propVal == null)
                             {
@@ -139,7 +135,7 @@ namespace Steeltoe.Common.Configuration
                         // previously resolved placeholder value.
                         propVal = ParseStringValue(propVal, config, visitedPlaceHolders);
                         result.Replace(startIndex, endIndex + SUFFIX.Length, propVal);
-                        logger?.LogDebug("Resolved placeholder '{0}'", placeholder);
+                        logger?.LogDebug("Resolved placeholder '{placeholder}'", placeholder);
                         startIndex = result.IndexOf(PREFIX, startIndex + propVal.Length);
                     }
                     else
@@ -161,8 +157,8 @@ namespace Steeltoe.Common.Configuration
 
         private static int FindEndIndex(StringBuilder property, int startIndex)
         {
-            int index = startIndex + PREFIX.Length;
-            int withinNestedPlaceholder = 0;
+            var index = startIndex + PREFIX.Length;
+            var withinNestedPlaceholder = 0;
             while (index < property.Length)
             {
                 if (SubstringMatch(property, index, SUFFIX))
@@ -170,17 +166,17 @@ namespace Steeltoe.Common.Configuration
                     if (withinNestedPlaceholder > 0)
                     {
                         withinNestedPlaceholder--;
-                        index = index + SUFFIX.Length;
+                        index += SUFFIX.Length;
                     }
                     else
                     {
                         return index;
                     }
                 }
-                else if (SubstringMatch(property, index, PREFIX))
+                else if (SubstringMatch(property, index, SIMPLE_PREFIX))
                 {
                     withinNestedPlaceholder++;
-                    index = index + PREFIX.Length;
+                    index += PREFIX.Length;
                 }
                 else
                 {
@@ -193,10 +189,14 @@ namespace Steeltoe.Common.Configuration
 
         private static bool SubstringMatch(StringBuilder str, int index, string substring)
         {
-            for (int j = 0; j < substring.Length; j++)
+            if (index + substring.Length > str.Length)
             {
-                int i = index + j;
-                if (i >= str.Length || str[i] != substring[j])
+                return false;
+            }
+
+            for (var i = 0; i < substring.Length; i++)
+            {
+                if (str[index + i] != substring[i])
                 {
                     return false;
                 }

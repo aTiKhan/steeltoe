@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using Steeltoe.CircuitBreaker.Hystrix.Exceptions;
@@ -35,7 +25,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
         {
         }
 
-        public HystrixCommand(IHystrixCommandGroupKey group, IHystrixThreadPoolKey threadPool, Action run = null,  Action fallback = null, ILogger logger = null)
+        public HystrixCommand(IHystrixCommandGroupKey group, IHystrixThreadPoolKey threadPool, Action run = null, Action fallback = null, ILogger logger = null)
             : this(group, null, threadPool, null, null, null, null, null, null, null, null, null, run, fallback, logger)
         {
         }
@@ -209,7 +199,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
         {
             _usersToken = token;
 
-            Task<TResult> toStart = ToTask();
+            var toStart = ToTask();
             if (!toStart.IsCompleted)
             {
                 if (_execThreadTask != null)
@@ -233,29 +223,29 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public IObservable<TResult> Observe()
         {
-            ReplaySubject<TResult> subject = new ReplaySubject<TResult>();
-            IObservable<TResult> observable = ToObservable();
+            var subject = new ReplaySubject<TResult>();
+            var observable = ToObservable();
             var disposable = observable.Subscribe(subject);
             return subject.Finally(() => disposable.Dispose());
         }
 
         public IObservable<TResult> Observe(CancellationToken token)
         {
-            ReplaySubject<TResult> subject = new ReplaySubject<TResult>();
-            IObservable<TResult> observable = ToObservable();
+            var subject = new ReplaySubject<TResult>();
+            var observable = ToObservable();
             observable.Subscribe(subject, token);
             return observable;
         }
 
         public IObservable<TResult> ToObservable()
         {
-            IObservable<TResult> observable = Observable.FromAsync<TResult>((ct) =>
+            var observable = Observable.FromAsync<TResult>((ct) =>
             {
-                this._usersToken = ct;
-                Task<TResult> toStart = ToTask();
+                _usersToken = ct;
+                var toStart = ToTask();
                 if (!toStart.IsCompleted)
                 {
-                    if (this._execThreadTask != null)
+                    if (_execThreadTask != null)
                     {
                         StartCommand();
                     }
@@ -275,7 +265,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
         {
             Setup();
 
-            if (PutInCacheIfAbsent(tcs.Task, out Task<TResult> fromCache))
+            if (PutInCacheIfAbsent(tcs.Task, out var fromCache))
             {
                 var task = fromCache;
                 return task;

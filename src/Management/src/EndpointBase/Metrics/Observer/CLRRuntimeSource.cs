@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.Common.Diagnostics;
 using System;
@@ -21,6 +11,7 @@ using System.Threading;
 namespace Steeltoe.Management.Endpoint.Metrics.Observer
 {
     // Note: This class to be removed when xplat in-process CLR events are supported.
+    [Obsolete("Use EventListeners instead")]
     public class CLRRuntimeSource : IPolledDiagnosticSource
     {
         public struct HeapMetrics
@@ -66,10 +57,10 @@ namespace Steeltoe.Management.Endpoint.Metrics.Observer
         {
             if (Source.IsEnabled(HEAP_EVENT))
             {
-                long totalMemory = GC.GetTotalMemory(false);
+                var totalMemory = GC.GetTotalMemory(false);
 
-                List<long> counts = new List<long>(GC.MaxGeneration);
-                for (int i = 0; i < GC.MaxGeneration; i++)
+                var counts = new List<long>(GC.MaxGeneration);
+                for (var i = 0; i < GC.MaxGeneration; i++)
                 {
                     counts.Add(GC.CollectionCount(i));
                 }
@@ -79,8 +70,8 @@ namespace Steeltoe.Management.Endpoint.Metrics.Observer
 
             if (Source.IsEnabled(THREADS_EVENT))
             {
-                ThreadPool.GetAvailableThreads(out int availWorkerThreads, out int availCompPortThreads);
-                ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxCompPortThreads);
+                ThreadPool.GetAvailableThreads(out var availWorkerThreads, out var availCompPortThreads);
+                ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var maxCompPortThreads);
                 Source.Write(THREADS_EVENT, new ThreadMetrics(availWorkerThreads, availCompPortThreads, maxWorkerThreads, maxCompPortThreads));
             }
         }

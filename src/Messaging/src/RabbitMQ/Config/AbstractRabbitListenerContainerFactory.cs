@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,51 +8,45 @@ using Steeltoe.Common.Contexts;
 using Steeltoe.Common.Retry;
 using Steeltoe.Common.Transaction;
 using Steeltoe.Common.Util;
-using Steeltoe.Messaging.Rabbit.Batch;
-using Steeltoe.Messaging.Rabbit.Connection;
-using Steeltoe.Messaging.Rabbit.Core;
-using Steeltoe.Messaging.Rabbit.Listener;
-using Steeltoe.Messaging.Rabbit.Listener.Adapters;
-using Steeltoe.Messaging.Rabbit.Support.Converter;
-using Steeltoe.Messaging.Rabbit.Util;
+using Steeltoe.Messaging.Converter;
+using Steeltoe.Messaging.RabbitMQ.Batch;
+using Steeltoe.Messaging.RabbitMQ.Connection;
+using Steeltoe.Messaging.RabbitMQ.Core;
+using Steeltoe.Messaging.RabbitMQ.Listener;
+using Steeltoe.Messaging.RabbitMQ.Listener.Adapters;
+using Steeltoe.Messaging.RabbitMQ.Util;
 using System;
 using System.Collections.Generic;
 
-namespace Steeltoe.Messaging.Rabbit.Config
+namespace Steeltoe.Messaging.RabbitMQ.Config
 {
     public abstract class AbstractRabbitListenerContainerFactory<C> : IRabbitListenerContainerFactory<C>
         where C : AbstractMessageListenerContainer
     {
         protected readonly ILogger _logger;
+        protected readonly ILoggerFactory _loggerFactory;
         private readonly IOptionsMonitor<RabbitOptions> _optionsMonitor;
 
-        protected AbstractRabbitListenerContainerFactory(IApplicationContext applicationContext, ILogger logger = null)
+        private ISmartMessageConverter _messageConverter;
+
+        protected AbstractRabbitListenerContainerFactory(IApplicationContext applicationContext, ILoggerFactory loggerFactory = null)
         {
             ApplicationContext = applicationContext;
-            _logger = logger;
+            _loggerFactory = loggerFactory;
         }
 
-        protected AbstractRabbitListenerContainerFactory(IApplicationContext applicationContext, IConnectionFactory connectionFactory, ILogger logger = null)
+        protected AbstractRabbitListenerContainerFactory(IApplicationContext applicationContext, IConnectionFactory connectionFactory, ILoggerFactory loggerFactory = null)
         {
             ApplicationContext = applicationContext;
-            _logger = logger;
+            _loggerFactory = loggerFactory;
             ConnectionFactory = connectionFactory;
         }
 
-        protected AbstractRabbitListenerContainerFactory(IApplicationContext applicationContext, IOptionsMonitor<RabbitOptions> optionsMonitor, IConnectionFactory connectionFactory, ILogger logger = null)
+        protected AbstractRabbitListenerContainerFactory(IApplicationContext applicationContext, IOptionsMonitor<RabbitOptions> optionsMonitor, IConnectionFactory connectionFactory, ILoggerFactory loggerFactory = null)
         {
             ApplicationContext = applicationContext;
-            _logger = logger;
+            _loggerFactory = loggerFactory;
             ConnectionFactory = connectionFactory;
-            _optionsMonitor = optionsMonitor;
-        }
-
-        protected AbstractRabbitListenerContainerFactory(IApplicationContext applicationContext, IOptionsMonitor<RabbitOptions> optionsMonitor, IConnectionFactory connectionFactory, IMessageConverter messageConverter, ILogger logger = null)
-        {
-            ApplicationContext = applicationContext;
-            _logger = logger;
-            ConnectionFactory = connectionFactory;
-            MessageConverter = messageConverter;
             _optionsMonitor = optionsMonitor;
         }
 
@@ -72,11 +56,28 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
         public IErrorHandler ErrorHandler { get; set; }
 
-        public IMessageConverter MessageConverter { get; set; }
+        public ISmartMessageConverter MessageConverter
+        {
+            get
+            {
+                if (_messageConverter == null)
+                {
+                    _messageConverter = ApplicationContext?.GetService<ISmartMessageConverter>();
+                }
+
+                if (_messageConverter == null)
+                {
+                    _messageConverter = new RabbitMQ.Support.Converter.SimpleMessageConverter(_loggerFactory?.CreateLogger<RabbitMQ.Support.Converter.SimpleMessageConverter>());
+                }
+
+                return _messageConverter;
+            }
+            set => _messageConverter = value;
+        }
 
         public AcknowledgeMode? AcknowledgeMode { get; set; }
 
-        public bool? ChannelTransacted { get; set; }
+        public bool? IsChannelTransacted { get; set; }
 
         public IPlatformTransactionManager TransactionManager { get; set; }
 
@@ -118,7 +119,9 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
         public bool? DeBatchingEnabled { get; set; }
 
-        public virtual string Name { get; set; }
+        public virtual string ServiceName { get; set; }
+
+        public bool PossibleAuthenticationFailureFatal { get; set; } = true;
 
         protected internal RabbitOptions Options
         {
@@ -175,6 +178,7 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
             instance.ConnectionFactory = ConnectionFactory;
             instance.ErrorHandler = ErrorHandler;
+            instance.PossibleAuthenticationFailureFatal = PossibleAuthenticationFailureFatal;
 
             if (MessageConverter != null && endpoint != null)
             {
@@ -186,9 +190,9 @@ namespace Steeltoe.Messaging.Rabbit.Config
                 instance.AcknowledgeMode = AcknowledgeMode.Value;
             }
 
-            if (ChannelTransacted.HasValue)
+            if (IsChannelTransacted.HasValue)
             {
-                instance.IsChannelTransacted = ChannelTransacted.Value;
+                instance.IsChannelTransacted = IsChannelTransacted.Value;
             }
 
             if (ApplicationContext != null)
@@ -275,9 +279,9 @@ namespace Steeltoe.Messaging.Rabbit.Config
                     instance.AcknowledgeMode = endpoint.AckMode.Value;
                 }
 
-                if (endpoint.BatchingStrategy != null)
+                if (BatchingStrategy != null)
                 {
-                    instance.BatchingStrategy = endpoint.BatchingStrategy;
+                    endpoint.BatchingStrategy = BatchingStrategy;
                 }
 
                 instance.ListenerId = endpoint.Id;

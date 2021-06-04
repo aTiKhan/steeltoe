@@ -1,22 +1,14 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
+using Microsoft.Extensions.Logging;
+using Steeltoe.Common.Contexts;
+using Steeltoe.Common.Retry;
 using Steeltoe.Common.Util;
 using Steeltoe.Integration;
 using Steeltoe.Integration.Endpoint;
 using Steeltoe.Integration.Handler;
-using Steeltoe.Integration.Retry;
 using Steeltoe.Integration.Support;
 using Steeltoe.Messaging;
 using Steeltoe.Messaging.Support;
@@ -32,20 +24,23 @@ namespace Steeltoe.Stream.TestBinder
 {
     public class TestChannelBinder : AbstractPollableMessageSourceBinder
     {
-        public TestChannelBinder(IServiceProvider serviceProvider, TestChannelBinderProvisioner provisioningProvider)
-            : base(serviceProvider, new string[] { }, provisioningProvider)
+        private readonly ILogger _logger;
+
+        public TestChannelBinder(IApplicationContext context, TestChannelBinderProvisioner provisioningProvider, ILogger<TestChannelBinder> logger)
+            : base(context, Array.Empty<string>(), provisioningProvider, logger)
         {
+            _logger = logger;
         }
 
         public IMessage LastError { get; private set; }
 
-        public override string Name => "testbinder";
+        public override string ServiceName { get; set; } = "testbinder";
 
         public IMessageSource MessageSourceDelegate { get; set; } = new MessageSource();
 
         protected override IMessageHandler CreateProducerMessageHandler(IProducerDestination destination, IProducerOptions producerProperties, IMessageChannel errorChannel)
         {
-            var handler = new BridgeHandler(ServiceProvider)
+            var handler = new BridgeHandler(ApplicationContext)
             {
                 OutputChannel = ((SpringIntegrationProducerDestination)destination).Channel
             };
@@ -58,10 +53,10 @@ namespace Steeltoe.Stream.TestBinder
             var siBinderInputChannel = ((SpringIntegrationConsumerDestination)destination).Channel;
 
             var messageListenerContainer = new TestMessageListeningContainer();
-            var endpoint = new TestMessageProducerSupportEndpoint(ServiceProvider, messageListenerContainer);
+            var endpoint = new TestMessageProducerSupportEndpoint(ApplicationContext, messageListenerContainer, _logger);
 
             var groupName = !string.IsNullOrEmpty(group) ? group : "anonymous";
-            var errorInfrastructure = RegisterErrorInfrastructure(destination, groupName, consumerOptions);
+            var errorInfrastructure = RegisterErrorInfrastructure(destination, groupName, consumerOptions, _logger);
             if (consumerOptions.MaxAttempts > 1)
             {
                 endpoint.RetryTemplate = BuildRetryTemplate(consumerOptions);
@@ -87,7 +82,7 @@ namespace Steeltoe.Stream.TestBinder
 
         protected override PolledConsumerResources CreatePolledConsumerResources(string name, string group, IConsumerDestination destination, IConsumerOptions consumerOptions)
         {
-            return new PolledConsumerResources(MessageSourceDelegate, RegisterErrorInfrastructure(destination, group, consumerOptions));
+            return new PolledConsumerResources(MessageSourceDelegate, RegisterErrorInfrastructure(destination, group, consumerOptions, _logger));
         }
 
         public class ErrorMessageHandler : ILastSubscriberMessageHandler
@@ -95,9 +90,12 @@ namespace Steeltoe.Stream.TestBinder
             public ErrorMessageHandler(TestChannelBinder binder)
             {
                 Binder = binder;
+                ServiceName = GetType().Name + "@" + GetHashCode();
             }
 
             public TestChannelBinder Binder { get; }
+
+            public virtual string ServiceName { get; set; }
 
             public void HandleMessage(IMessage message)
             {
@@ -109,7 +107,7 @@ namespace Steeltoe.Stream.TestBinder
         {
             public IMessage Receive()
             {
-                var message = new GenericMessage(
+                var message = Message.Create(
                     "polled data",
                     new MessageHeaders(new Dictionary<string, object>() { { MessageHeaders.CONTENT_TYPE, "text/plain" } }));
                 return message;
@@ -118,10 +116,17 @@ namespace Steeltoe.Stream.TestBinder
 
         public class TestMessageListeningContainer : IMessageHandler
         {
+            public TestMessageListeningContainer()
+            {
+                ServiceName = GetType().Name + "@" + GetHashCode();
+            }
+
             public void HandleMessage(IMessage message)
             {
                 MessageListener.Invoke(message);
             }
+
+            public virtual string ServiceName { get; set; }
 
             public Action<IMessage> MessageListener { get; set; }
         }
@@ -131,8 +136,8 @@ namespace Steeltoe.Stream.TestBinder
             private static readonly AsyncLocal<IAttributeAccessor> _attributesHolder = new AsyncLocal<IAttributeAccessor>();
             private readonly TestMessageListeningContainer _messageListenerContainer;
 
-            public TestMessageProducerSupportEndpoint(IServiceProvider serviceProvider, TestMessageListeningContainer messageListenerContainer)
-                : base(serviceProvider)
+            public TestMessageProducerSupportEndpoint(IApplicationContext context, TestMessageListeningContainer messageListenerContainer, ILogger logger)
+                : base(context, logger)
             {
                 _messageListenerContainer = messageListenerContainer;
             }
@@ -230,6 +235,6 @@ namespace Steeltoe.Stream.TestBinder
                     _adapter.SendMessage(message);
                 }
             }
-    }
+        }
     }
 }

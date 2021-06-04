@@ -1,19 +1,10 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Steeltoe.Connector.Services;
+using System;
 
 namespace Steeltoe.Connector.CosmosDb
 {
@@ -21,21 +12,35 @@ namespace Steeltoe.Connector.CosmosDb
     {
         public Connection Get(IConfiguration configuration, string serviceName)
         {
-            var info = serviceName == null
-               ? configuration.GetSingletonServiceInfo<CosmosDbServiceInfo>()
-               : configuration.GetRequiredServiceInfo<CosmosDbServiceInfo>(serviceName);
+            var info = string.IsNullOrEmpty(serviceName)
+                ? configuration.GetSingletonServiceInfo<CosmosDbServiceInfo>()
+                : configuration.GetRequiredServiceInfo<CosmosDbServiceInfo>(serviceName);
+            return GetConnection(info, configuration);
+        }
 
+        public Connection Get(IConfiguration configuration, IServiceInfo serviceInfo)
+            => GetConnection((CosmosDbServiceInfo)serviceInfo, configuration);
+
+        public bool IsSameType(string serviceType)
+            => serviceType.Equals("cosmosdb-readonly", StringComparison.InvariantCultureIgnoreCase);
+
+        public bool IsSameType(IServiceInfo serviceInfo)
+            => serviceInfo is CosmosDbServiceInfo && serviceInfo.Id.Contains("readonly");
+
+        private Connection GetConnection(CosmosDbServiceInfo info, IConfiguration configuration)
+        {
             var cosmosConfig = new CosmosDbConnectorOptions(configuration)
             {
                 UseReadOnlyCredentials = true
             };
 
             var configurer = new CosmosDbProviderConfigurer();
-            return new Connection
-            {
-                ConnectionString = configurer.Configure(info, cosmosConfig),
-                Name = "CosmosDbReadOnly" + serviceName?.Insert(0, "-")
-            };
+
+            var conn = new Connection(configurer.Configure(info, cosmosConfig), "CosmosDb-ReadOnly", info);
+            conn.Properties.Add("DatabaseId", cosmosConfig.DatabaseId);
+            conn.Properties.Add("DatabaseLink", cosmosConfig.DatabaseLink);
+
+            return conn;
         }
     }
 }

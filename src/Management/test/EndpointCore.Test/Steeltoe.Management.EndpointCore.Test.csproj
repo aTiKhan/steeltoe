@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;net5.0;</TargetFrameworks>
+    <AssemblyName>Steeltoe.Management.EndpointCore.Test</AssemblyName>
+    <RootNamespace>Steeltoe.Management.Endpoint.Test</RootNamespace>
   </PropertyGroup>
   
   <Import Project="..\..\..\..\versions.props" />
@@ -31,11 +33,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Configuration\src\CloudFoundryBase\Steeltoe.Extensions.Configuration.CloudFoundryBase.csproj" />
+    <ProjectReference Include="..\..\..\Logging\src\DynamicSerilogBase\Steeltoe.Extensions.Logging.DynamicSerilogBase.csproj" />
+    <ProjectReference Include="..\..\..\Logging\src\DynamicSerilogCore\Steeltoe.Extensions.Logging.DynamicSerilogCore.csproj" />
     <ProjectReference Include="..\..\src\EndpointCore\Steeltoe.Management.EndpointCore.csproj" />
     <ProjectReference Include="..\EndpointBase.Test\Steeltoe.Management.EndpointBase.Test.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.System" Version="3.1.2" />
     <PackageReference Include="FluentAssertions.Json" Version="5.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="$(AspNetCoreVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="$(ExtensionsVersion)" />

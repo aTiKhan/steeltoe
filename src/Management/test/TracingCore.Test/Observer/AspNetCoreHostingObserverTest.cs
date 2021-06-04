@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -20,7 +10,6 @@ using Steeltoe.Management.OpenTelemetry.Trace.Propagation;
 using Steeltoe.Management.Tracing.Test;
 using Steeltoe.Management.TracingCore;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -357,6 +346,43 @@ namespace Steeltoe.Management.Tracing.Observer.Test
             Assert.True(context.TraceOptions.IsSampled());
         }
 
+        [Fact]
+        public void ParentSpanContinuedFromContext()
+        {
+            var opts = GetOptions();
+            var tracing = new OpenTelemetryTracing(opts, null);
+            var obs = new AspNetCoreHostingObserver(opts, tracing);
+            var request = GetHttpRequestMessage("GET", "/foo");
+            request.Request.Headers.Add(B3Constants.XB3TraceId, new StringValues(TRACE_ID_BASE16));
+            request.Request.Headers.Add(B3Constants.XB3SpanId, new StringValues(SPAN_ID_BASE16));
+            request.Request.Headers.Add(B3Constants.XB3Sampled, new StringValues("1"));
+
+            obs.ProcessEvent(AspNetCoreHostingObserver.HOSTING_START_EVENT, new { HttpContext = request });
+
+            var span = GetCurrentSpan(tracing.Tracer);
+            Assert.NotNull(span);
+
+            var contextSpan = obs.Active;
+            Assert.NotNull(contextSpan);
+
+            Assert.Equal(span, contextSpan);
+            Assert.Equal("http:/foo", span.ToSpanData().Name);
+
+            Assert.False(span.HasEnded());
+
+            var spanData = span.ToSpanData();
+            var attributes = spanData.Attributes.ToDictionary(kv => kv.Key, kv => kv.Value);
+
+            Assert.Equal(SPAN_ID_BASE16, spanData.ParentSpanId.ToHexString());
+            Assert.Equal(TRACE_ID_BASE16, spanData.Context.TraceId.ToHexString());
+            Assert.Equal(SpanKind.Server, spanData.Kind);
+            Assert.Equal("http://localhost:5555/foo", attributes[SpanAttributeConstants.HttpUrlKey]);
+            Assert.Equal(HttpMethod.Get.ToString(), attributes[SpanAttributeConstants.HttpMethodKey]);
+            Assert.Equal("localhost:5555", attributes[SpanAttributeConstants.HttpHostKey]);
+            Assert.Equal("/foo", attributes[SpanAttributeConstants.HttpPathKey]);
+            Assert.Equal("Header", attributes["http.request.TEST"]);
+        }
+
         private HttpContext GetHttpRequestMessage()
         {
             return GetHttpRequestMessage("GET", "/");
@@ -364,8 +390,10 @@ namespace Steeltoe.Management.Tracing.Observer.Test
 
         private HttpContext GetHttpRequestMessage(string method, string path)
         {
-            HttpContext context = new DefaultHttpContext();
-            context.TraceIdentifier = Guid.NewGuid().ToString();
+            HttpContext context = new DefaultHttpContext
+            {
+                TraceIdentifier = Guid.NewGuid().ToString()
+            };
 
             context.Request.Body = new MemoryStream();
             context.Response.Body = new MemoryStream();

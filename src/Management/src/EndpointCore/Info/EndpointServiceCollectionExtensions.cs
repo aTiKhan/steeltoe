@@ -1,22 +1,13 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Steeltoe.Management.Endpoint.Hypermedia;
 using Steeltoe.Management.Endpoint.Info.Contributor;
+using Steeltoe.Management.Info;
 using System;
 using System.Collections.Generic;
 
@@ -28,44 +19,53 @@ namespace Steeltoe.Management.Endpoint.Info
         /// Adds components of the Info actuator to Microsoft-DI
         /// </summary>
         /// <param name="services">Service collection to add info to</param>
-        /// <param name="config">Application configuration (this actuator looks for a settings starting with management:endpoints:info)</param>
-        public static void AddInfoActuator(this IServiceCollection services, IConfiguration config)
+        /// <param name="config">Application configuration. Retrieved from the <see cref="IServiceCollection"/> if not provided (this actuator looks for a settings starting with management:endpoints:info)</param>
+        public static void AddInfoActuator(this IServiceCollection services, IConfiguration config = null)
         {
-            services.AddInfoActuator(config, new GitInfoContributor(), new AppSettingsInfoContributor(config));
+            var serviceProvider = services.BuildServiceProvider();
+            config ??= serviceProvider.GetRequiredService<IConfiguration>();
+            var otherInfoContributors = serviceProvider.GetServices<IInfoContributor>();
+            var allContributors = new List<IInfoContributor> { new GitInfoContributor(), new AppSettingsInfoContributor(config), new BuildInfoContributor() };
+            foreach (var o in otherInfoContributors)
+            {
+                allContributors.Add(o);
+            }
+
+            services.AddInfoActuator(config, allContributors.ToArray());
         }
 
         /// <summary>
         /// Adds components of the info actuator to Microsoft-DI
         /// </summary>
         /// <param name="services">Service collection to add info to</param>
-        /// <param name="config">Application configuration (this actuator looks for a settings starting with management:endpoints:info)</param>
+        /// <param name="config">Application configuration. Retrieved from the <see cref="IServiceCollection"/> if not provided (this actuator looks for a settings starting with management:endpoints:info)</param>
         /// <param name="contributors">Contributors to application information</param>
-        public static void AddInfoActuator(this IServiceCollection services, IConfiguration config, params IInfoContributor[] contributors)
+        public static void AddInfoActuator(this IServiceCollection services, IConfiguration config = null, params IInfoContributor[] contributors)
         {
             if (services == null)
             {
                 throw new ArgumentNullException(nameof(services));
             }
 
+            config ??= services.BuildServiceProvider().GetService<IConfiguration>();
             if (config == null)
             {
                 throw new ArgumentNullException(nameof(config));
             }
 
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<IManagementOptions>(new ActuatorManagementOptions(config)));
-            var options = new InfoEndpointOptions(config);
-            services.TryAddSingleton<IInfoOptions>(options);
-            services.RegisterEndpointOptions(options);
+            services.AddActuatorManagementOptions(config);
+            services.AddInfoActuatorServices(config);
+            services.AddActuatorEndpointMapping<InfoEndpoint>();
+
             AddContributors(services, contributors);
-            services.TryAddSingleton<InfoEndpoint>();
         }
 
         private static void AddContributors(IServiceCollection services, params IInfoContributor[] contributors)
         {
-            List<ServiceDescriptor> descriptors = new List<ServiceDescriptor>();
+            var descriptors = new List<ServiceDescriptor>();
             foreach (var instance in contributors)
             {
-                descriptors.Add(ServiceDescriptor.Singleton<IInfoContributor>(instance));
+                descriptors.Add(ServiceDescriptor.Singleton(instance));
             }
 
             services.TryAddEnumerable(descriptors);

@@ -1,33 +1,28 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
-using Steeltoe.Common.Expression;
+using Steeltoe.Common.Expression.Internal;
+using Steeltoe.Common.Expression.Internal.Contexts;
+using Steeltoe.Common.Expression.Internal.Spring.Common;
+using Steeltoe.Common.Expression.Internal.Spring.Standard;
 using Steeltoe.Messaging.Handler.Attributes;
 using Steeltoe.Messaging.Handler.Invocation;
-using Steeltoe.Messaging.Rabbit.Exceptions;
-using Steeltoe.Messaging.Rabbit.Expressions;
-using Steeltoe.Messaging.Rabbit.Support;
+using Steeltoe.Messaging.RabbitMQ.Exceptions;
+using Steeltoe.Messaging.RabbitMQ.Support;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
+namespace Steeltoe.Messaging.RabbitMQ.Listener.Adapters
 {
     public class DelegatingInvocableHandler
     {
+        private static readonly SpelExpressionParser PARSER = new SpelExpressionParser();
+        private static readonly IParserContext PARSER_CONTEXT = new TemplateParserContext("!{", "}");
+
         private readonly Dictionary<IInvocableHandlerMethod, IExpression> _handlerSendTo = new Dictionary<IInvocableHandlerMethod, IExpression>();
         private readonly ConcurrentDictionary<Type, IInvocableHandlerMethod> _cachedHandlers = new ConcurrentDictionary<Type, IInvocableHandlerMethod>();
 
@@ -62,12 +57,12 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             var payloadClass = message.Payload.GetType();
             var handler = GetHandlerForPayload(payloadClass);
             var result = handler.Invoke(message, providedArgs);
-            if (!message.Headers.TryGetValue(AmqpHeaders.REPLY_TO, out _) && _handlerSendTo.TryGetValue(handler, out var replyTo))
+            if (!message.Headers.TryGetValue(RabbitMessageHeaders.REPLY_TO, out _) && _handlerSendTo.TryGetValue(handler, out var replyTo))
             {
-                return new InvocationResult(result, replyTo, handler.Method.ReturnType, handler.Bean, handler.Method);
+                return new InvocationResult(result, replyTo, handler.Method.ReturnType, handler.Handler, handler.Method);
             }
 
-            return new InvocationResult(result, null, handler.Method.ReturnType, handler.Bean, handler.Method);
+            return new InvocationResult(result, null, handler.Method.ReturnType, handler.Handler, handler.Method);
         }
 
         public string GetMethodNameFor(object payload)
@@ -96,7 +91,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
             if (handler != null)
             {
                 _handlerSendTo.TryGetValue(handler, out var sendto);
-                return new InvocationResult(result, sendto, handler.Method.ReturnType, handler.Bean, handler.Method);
+                return new InvocationResult(result, sendto, handler.Method.ReturnType, handler.Handler, handler.Method);
             }
 
             return null;
@@ -109,7 +104,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
                 handler = FindHandlerForPayload(payloadClass);
                 if (handler == null)
                 {
-                    throw new AmqpException("No method found for " + payloadClass);
+                    throw new RabbitException("No method found for " + payloadClass);
                 }
 
                 _cachedHandlers.TryAdd(payloadClass, handler);
@@ -131,7 +126,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
                         var resultIsDefault = result.Equals(DefaultHandler);
                         if (!handler.Equals(DefaultHandler) && !resultIsDefault)
                         {
-                            throw new AmqpException("Ambiguous methods for payload type: " + payloadClass + ": " + result.Method.Name + " and " + handler.Method.Name);
+                            throw new RabbitException("Ambiguous methods for payload type: " + payloadClass + ": " + result.Method.Name + " and " + handler.Method.Name);
                         }
 
                         if (!resultIsDefault)
@@ -171,7 +166,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
                 {
                     if (foundCandidate)
                     {
-                        throw new AmqpException("Ambiguous payload parameter for " + method.ToString());
+                        throw new RabbitException("Ambiguous payload parameter for " + method.ToString());
                     }
 
                     foundCandidate = true;
@@ -212,9 +207,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
 
             if (replyTo != null)
             {
-                throw new NotImplementedException("PARSER");
-
-                // _handlerSendTo[handler] = PARSER.parseExpression(replyTo, PARSER_CONTEXT);
+                _handlerSendTo[handler] = PARSER.ParseExpression(replyTo, PARSER_CONTEXT);
             }
         }
 
@@ -239,7 +232,7 @@ namespace Steeltoe.Messaging.Rabbit.Listener.Adapters
         {
             if (Resolver != null)
             {
-                var resolvedValue = ServiceExpressionContext.ResolveEmbeddedValue(value);
+                var resolvedValue = ServiceExpressionContext.ApplicationContext.ResolveEmbeddedValue(value);
                 var newValue = Resolver.Evaluate(resolvedValue, ServiceExpressionContext);
                 if (!(newValue is string))
                 {

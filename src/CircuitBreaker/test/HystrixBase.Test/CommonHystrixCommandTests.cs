@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Strategy.Options;
 using System;
@@ -68,9 +58,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         protected void AssertNonBlockingObserve(C command, Action<C> assertion, bool isSuccess)
         {
-            CountdownEvent latch = new CountdownEvent(1);
+            var latch = new CountdownEvent(1);
 
-            IObservable<int> o = command.Observe();
+            var o = command.Observe();
             o.Subscribe(
                 (n) =>
                 {
@@ -120,7 +110,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         protected void AssertSaneHystrixRequestLog(int numCommands)
         {
-            HystrixRequestLog currentRequestLog = HystrixRequestLog.CurrentRequestLog;
+            var currentRequestLog = HystrixRequestLog.CurrentRequestLog;
 
             try
             {
@@ -139,15 +129,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         protected void AssertCommandExecutionEvents(IHystrixInvokableInfo command, params HystrixEventType[] expectedEventTypes)
         {
-            bool emitExpected = false;
-            int expectedEmitCount = 0;
+            var emitExpected = false;
+            var expectedEmitCount = 0;
 
-            bool fallbackEmitExpected = false;
-            int expectedFallbackEmitCount = 0;
+            var fallbackEmitExpected = false;
+            var expectedFallbackEmitCount = 0;
 
-            List<HystrixEventType> condensedEmitExpectedEventTypes = new List<HystrixEventType>();
+            var condensedEmitExpectedEventTypes = new List<HystrixEventType>();
 
-            foreach (HystrixEventType expectedEventType in expectedEventTypes)
+            foreach (var expectedEventType in expectedEventTypes)
             {
                 if (expectedEventType.Equals(HystrixEventType.EMIT))
                 {
@@ -177,7 +167,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 }
             }
 
-            List<HystrixEventType> actualEventTypes = command.ExecutionEvents;
+            var actualEventTypes = command.ExecutionEvents;
             Assert.Equal(expectedEmitCount, command.NumberEmissions);
             Assert.Equal(expectedFallbackEmitCount, command.NumberFallbackEmissions);
             Assert.Equal(condensedEmitExpectedEventTypes, actualEventTypes);
@@ -210,16 +200,16 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         protected C GetCommand(IHystrixCommandKey key, ExecutionIsolationStrategy isolationStrategy, ExecutionResultTest executionResult, int executionLatency, FallbackResultTest fallbackResult, int fallbackLatency, TestCircuitBreaker circuitBreaker, IHystrixThreadPool threadPool, int timeout, CacheEnabledTest cacheEnabled, object value, int executionSemaphoreCount, int fallbackSemaphoreCount)
         {
-            SemaphoreSlim executionSemaphore = new SemaphoreSlim(executionSemaphoreCount);
-            SemaphoreSlim fallbackSemaphore = new SemaphoreSlim(fallbackSemaphoreCount);
+            var executionSemaphore = new SemaphoreSlim(executionSemaphoreCount);
+            var fallbackSemaphore = new SemaphoreSlim(fallbackSemaphoreCount);
 
             return GetCommand(key, isolationStrategy, executionResult, executionLatency, fallbackResult, fallbackLatency, circuitBreaker, threadPool, timeout, cacheEnabled, value, executionSemaphore, fallbackSemaphore, false);
         }
 
         protected C GetCommand(ExecutionIsolationStrategy isolationStrategy, ExecutionResultTest executionResult, int executionLatency, FallbackResultTest fallbackResult, int fallbackLatency, TestCircuitBreaker circuitBreaker, IHystrixThreadPool threadPool, int timeout, CacheEnabledTest cacheEnabled, object value, int executionSemaphoreCount, int fallbackSemaphoreCount, bool circuitBreakerDisabled)
         {
-            SemaphoreSlim executionSemaphore = new SemaphoreSlim(executionSemaphoreCount);
-            SemaphoreSlim fallbackSemaphore = new SemaphoreSlim(fallbackSemaphoreCount);
+            var executionSemaphore = new SemaphoreSlim(executionSemaphoreCount);
+            var fallbackSemaphore = new SemaphoreSlim(fallbackSemaphoreCount);
             return GetCommand(isolationStrategy, executionResult, executionLatency, fallbackResult, fallbackLatency, circuitBreaker, threadPool, timeout, cacheEnabled, value, executionSemaphore, fallbackSemaphore, circuitBreakerDisabled);
         }
 
@@ -244,7 +234,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         protected C GetCircuitOpenCommand(ExecutionIsolationStrategy isolationStrategy, FallbackResultTest fallbackResult)
         {
-            TestCircuitBreaker openCircuit = new TestCircuitBreaker();
+            var openCircuit = new TestCircuitBreaker();
             openCircuit.SetForceShortCircuit(true);
             return GetCommand(isolationStrategy, ExecutionResultTest.SUCCESS, 0, fallbackResult, 0, openCircuit, null, 500, CacheEnabledTest.NO, "foo", 10, 10, false);
         }

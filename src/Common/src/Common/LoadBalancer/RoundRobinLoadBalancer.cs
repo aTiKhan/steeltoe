@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -28,12 +18,14 @@ namespace Steeltoe.Common.LoadBalancer
         internal readonly IServiceInstanceProvider ServiceInstanceProvider;
         internal readonly IDistributedCache _distributedCache;
         internal readonly ConcurrentDictionary<string, int> NextIndexForService = new ConcurrentDictionary<string, int>();
+        private readonly DistributedCacheEntryOptions _cacheOptions;
         private readonly ILogger _logger;
 
-        public RoundRobinLoadBalancer(IServiceInstanceProvider serviceInstanceProvider, IDistributedCache distributedCache = null, ILogger logger = null)
+        public RoundRobinLoadBalancer(IServiceInstanceProvider serviceInstanceProvider, IDistributedCache distributedCache = null, DistributedCacheEntryOptions cacheEntryOptions = null, ILogger logger = null)
         {
             ServiceInstanceProvider = serviceInstanceProvider ?? throw new ArgumentNullException(nameof(serviceInstanceProvider));
             _distributedCache = distributedCache;
+            _cacheOptions = cacheEntryOptions;
             _logger = logger;
             _logger?.LogDebug("Distributed cache was provided to load balancer: {DistributedCacheIsNull}", _distributedCache == null);
         }
@@ -42,10 +34,10 @@ namespace Steeltoe.Common.LoadBalancer
         {
             var serviceName = request.Host;
             _logger?.LogTrace("ResolveServiceInstance {serviceName}", serviceName);
-            string cacheKey = IndexKeyPrefix + serviceName;
+            var cacheKey = IndexKeyPrefix + serviceName;
 
             // get instances for this service
-            var availableServiceInstances = await ServiceInstanceProvider.GetInstancesWithCacheAsync(serviceName, _distributedCache).ConfigureAwait(false);
+            var availableServiceInstances = await ServiceInstanceProvider.GetInstancesWithCacheAsync(serviceName, _distributedCache, _cacheOptions).ConfigureAwait(false);
             if (!availableServiceInstances.Any())
             {
                 _logger?.LogError("No service instances available for {serviceName}", serviceName);
@@ -53,14 +45,14 @@ namespace Steeltoe.Common.LoadBalancer
             }
 
             // get next instance, or wrap back to first instance if we reach the end of the list
-            IServiceInstance serviceInstance = null;
             var nextInstanceIndex = await GetOrInitNextIndex(cacheKey, 0).ConfigureAwait(false);
             if (nextInstanceIndex >= availableServiceInstances.Count)
             {
                 nextInstanceIndex = 0;
             }
 
-            serviceInstance = availableServiceInstances[nextInstanceIndex];
+            // get next instance, or wrap back to first instance if we reach the end of the list
+            var serviceInstance = availableServiceInstances[nextInstanceIndex];
             _logger?.LogDebug("Resolved {url} to {service}", request.Host, serviceInstance.Host);
             await SetNextIndex(cacheKey, nextInstanceIndex).ConfigureAwait(false);
             return new Uri(serviceInstance.Uri, request.PathAndQuery);
@@ -73,7 +65,7 @@ namespace Steeltoe.Common.LoadBalancer
 
         private async Task<int> GetOrInitNextIndex(string cacheKey, int initValue)
         {
-            int index = initValue;
+            var index = initValue;
             if (_distributedCache != null)
             {
                 var cacheEntry = await _distributedCache.GetAsync(cacheKey).ConfigureAwait(false);

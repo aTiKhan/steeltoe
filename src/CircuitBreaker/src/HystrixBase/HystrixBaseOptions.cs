@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Strategy.Options;
 
@@ -22,12 +12,12 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         protected HystrixBaseOptions(IHystrixDynamicOptions dynamicOptions)
         {
-            this._dynamic = dynamicOptions;
+            _dynamic = dynamicOptions;
         }
 
         protected virtual bool GetBoolean(string prefix, string key, string property, bool globalDefault, bool? instanceDefaultFromCode)
         {
-            bool result = globalDefault;
+            var result = globalDefault;
             result = (_dynamic != null) ? _dynamic.GetBoolean(prefix + ":default:" + property, result) : result; // dynamic global default
             result = instanceDefaultFromCode ?? result; // instance default from code
             result = (_dynamic != null) ? _dynamic.GetBoolean(prefix + ":" + key + ":" + property, result) : result; // dynamic instance value
@@ -36,7 +26,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         protected virtual int GetInteger(string prefix, string key, string property, int globalDefault, int? instanceDefaultFromCode)
         {
-            int result = globalDefault;
+            var result = globalDefault;
             result = (_dynamic != null) ? _dynamic.GetInteger(prefix + ":default:" + property, result) : result; // dynamic global default
             result = instanceDefaultFromCode ?? result; // instance default from code
             result = (_dynamic != null) ? _dynamic.GetInteger(prefix + ":" + key + ":" + property, result) : result; // dynamic instance value
@@ -45,7 +35,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         protected virtual long GetLong(string prefix, string key, string property, long globalDefault, long? instanceDefaultFromCode)
         {
-            long result = globalDefault;
+            var result = globalDefault;
             result = (_dynamic != null) ? _dynamic.GetLong(prefix + ":default:" + property, result) : result; // dynamic global default
             result = instanceDefaultFromCode ?? result; // instance default from code
             result = (_dynamic != null) ? _dynamic.GetLong(prefix + ":" + key + ":" + property, result) : result; // dynamic instance value
@@ -54,7 +44,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         protected virtual string GetString(string prefix, string key, string property, string globalDefault, string instanceDefaultFromCode)
         {
-            string result = globalDefault;
+            var result = globalDefault;
             result = (_dynamic != null) ? _dynamic.GetString(prefix + ":default:" + property, result) : result; // dynamic global default
             result = instanceDefaultFromCode ?? result; // instance default from code
             result = (_dynamic != null) ? _dynamic.GetString(prefix + ":" + key + ":" + property, result) : result; // dynamic instance value

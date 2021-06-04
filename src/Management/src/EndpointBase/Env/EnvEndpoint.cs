@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -22,7 +12,7 @@ using System.Linq;
 
 namespace Steeltoe.Management.Endpoint.Env
 {
-    public class EnvEndpoint : AbstractEndpoint<EnvironmentDescriptor>
+    public class EnvEndpoint : AbstractEndpoint<EnvironmentDescriptor>, IEnvEndpoint
     {
         private readonly ILogger<EnvEndpoint> _logger;
         private readonly IConfiguration _configuration;
@@ -55,13 +45,13 @@ namespace Steeltoe.Management.Endpoint.Env
         public EnvironmentDescriptor DoInvoke(IConfiguration configuration)
         {
             IList<string> activeProfiles = new List<string>() { _env.EnvironmentName };
-            IList<PropertySourceDescriptor> propertySources = GetPropertySources(configuration);
+            var propertySources = GetPropertySources(configuration);
             return new EnvironmentDescriptor(activeProfiles, propertySources);
         }
 
         public virtual IList<PropertySourceDescriptor> GetPropertySources(IConfiguration configuration)
         {
-            List<PropertySourceDescriptor> results = new List<PropertySourceDescriptor>();
+            var results = new List<PropertySourceDescriptor>();
             if (configuration is IConfigurationRoot root)
             {
                 var providers = root.Providers.ToList();
@@ -87,7 +77,7 @@ namespace Steeltoe.Management.Endpoint.Env
 
         public virtual PropertySourceDescriptor GetPropertySourceDescriptor(IConfigurationProvider provider)
         {
-            Dictionary<string, PropertyValueDescriptor> properties = new Dictionary<string, PropertyValueDescriptor>();
+            var properties = new Dictionary<string, PropertyValueDescriptor>();
             var sourceName = GetPropertySourceName(provider);
 
             foreach (var key in GetFullKeyNames(provider, null, new HashSet<string>()))
@@ -118,7 +108,7 @@ namespace Steeltoe.Management.Endpoint.Env
         {
             foreach (var key in provider.GetChildKeys(Enumerable.Empty<string>(), rootKey).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                string surrogateKey = key;
+                var surrogateKey = key;
                 if (rootKey != null)
                 {
                     surrogateKey = rootKey + ":" + key;

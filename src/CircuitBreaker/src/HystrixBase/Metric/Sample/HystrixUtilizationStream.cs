@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Util;
 using Steeltoe.Common.Util;
@@ -24,9 +14,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Sample
     public class HystrixUtilizationStream
     {
         private const int DataEmissionIntervalInMs = 500;
-        private readonly int intervalInMilliseconds;
-        private readonly IObservable<HystrixUtilization> allUtilizationStream;
-        private readonly AtomicBoolean isSourceCurrentlySubscribed = new AtomicBoolean(false);
+        private readonly IObservable<HystrixUtilization> _allUtilizationStream;
+        private readonly AtomicBoolean _isSourceCurrentlySubscribed = new AtomicBoolean(false);
 
         private static Func<long, HystrixUtilization> AllUtilization { get; } =
           (long timestamp) =>
@@ -38,53 +27,50 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Sample
 
         public HystrixUtilizationStream(int intervalInMilliseconds)
         {
-            this.intervalInMilliseconds = intervalInMilliseconds;
-            this.allUtilizationStream = Observable.Interval(TimeSpan.FromMilliseconds(intervalInMilliseconds))
+            IntervalInMilliseconds = intervalInMilliseconds;
+            _allUtilizationStream = Observable.Interval(TimeSpan.FromMilliseconds(intervalInMilliseconds))
                     .Map((t) => AllUtilization(t))
                     .OnSubscribe(() =>
                     {
-                        isSourceCurrentlySubscribed.Value = true;
+                        _isSourceCurrentlySubscribed.Value = true;
                     })
                     .OnDispose(() =>
                     {
-                        isSourceCurrentlySubscribed.Value = false;
+                        _isSourceCurrentlySubscribed.Value = false;
                     })
                     .Publish().RefCount();
         }
 
         // The data emission interval is looked up on startup only
-        private static HystrixUtilizationStream instance =
+        private static readonly HystrixUtilizationStream Instance =
                     new HystrixUtilizationStream(DataEmissionIntervalInMs);
 
         public static HystrixUtilizationStream GetInstance()
         {
-            return instance;
+            return Instance;
         }
 
-         // Return a ref-counted stream that will only do work when at least one subscriber is present
+        // Return a ref-counted stream that will only do work when at least one subscriber is present
         public IObservable<HystrixUtilization> Observe()
         {
-            return allUtilizationStream;
+            return _allUtilizationStream;
         }
 
         public IObservable<Dictionary<IHystrixCommandKey, HystrixCommandUtilization>> ObserveCommandUtilization()
         {
-            return allUtilizationStream.Map((a) => OnlyCommandUtilization(a));
+            return _allUtilizationStream.Map((a) => OnlyCommandUtilization(a));
         }
 
         public IObservable<Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolUtilization>> ObserveThreadPoolUtilization()
         {
-            return allUtilizationStream.Map((a) => OnlyThreadPoolUtilization(a));
+            return _allUtilizationStream.Map((a) => OnlyThreadPoolUtilization(a));
         }
 
-        public int IntervalInMilliseconds
-        {
-            get { return this.intervalInMilliseconds; }
-        }
+        public int IntervalInMilliseconds { get; }
 
         public bool IsSourceCurrentlySubscribed
         {
-            get { return isSourceCurrentlySubscribed.Value; }
+            get { return _isSourceCurrentlySubscribed.Value; }
         }
 
         internal static HystrixUtilizationStream GetNonSingletonInstanceOnlyUsedInUnitTests(int delayInMs)
@@ -105,10 +91,10 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Sample
         private static Func<long, Dictionary<IHystrixCommandKey, HystrixCommandUtilization>> AllCommandUtilization { get; } =
             (long timestamp) =>
             {
-                Dictionary<IHystrixCommandKey, HystrixCommandUtilization> commandUtilizationPerKey = new Dictionary<IHystrixCommandKey, HystrixCommandUtilization>();
-                foreach (HystrixCommandMetrics commandMetrics in HystrixCommandMetrics.GetInstances())
+                var commandUtilizationPerKey = new Dictionary<IHystrixCommandKey, HystrixCommandUtilization>();
+                foreach (var commandMetrics in HystrixCommandMetrics.GetInstances())
                 {
-                    IHystrixCommandKey commandKey = commandMetrics.CommandKey;
+                    var commandKey = commandMetrics.CommandKey;
                     commandUtilizationPerKey.Add(commandKey, SampleCommandUtilization(commandMetrics));
                 }
 
@@ -118,10 +104,10 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Sample
         private static Func<long, Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolUtilization>> AllThreadPoolUtilization { get; } =
             (long timestamp) =>
             {
-                Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolUtilization> threadPoolUtilizationPerKey = new Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolUtilization>();
-                foreach (HystrixThreadPoolMetrics threadPoolMetrics in HystrixThreadPoolMetrics.GetInstances())
+                var threadPoolUtilizationPerKey = new Dictionary<IHystrixThreadPoolKey, HystrixThreadPoolUtilization>();
+                foreach (var threadPoolMetrics in HystrixThreadPoolMetrics.GetInstances())
                 {
-                    IHystrixThreadPoolKey threadPoolKey = threadPoolMetrics.ThreadPoolKey;
+                    var threadPoolKey = threadPoolMetrics.ThreadPoolKey;
                     threadPoolUtilizationPerKey.Add(threadPoolKey, SampleThreadPoolUtilization(threadPoolMetrics));
                 }
 

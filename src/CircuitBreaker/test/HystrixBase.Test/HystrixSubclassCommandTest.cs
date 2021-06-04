@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -24,7 +14,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
     {
         private static readonly IHystrixCommandGroupKey GroupKey = HystrixCommandGroupKeyDefault.AsKey("GROUP");
 
-        private ITestOutputHelper output;
+        private readonly ITestOutputHelper output;
 
         public HystrixSubclassCommandTest(ITestOutputHelper output)
             : base()
@@ -55,17 +45,17 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             HystrixCommand<int> superCmd3 = new SuperCommand("no-cache", true);
             Assert.Equal(1, superCmd3.Execute());
             output.WriteLine("REQ LOG : " + HystrixRequestLog.CurrentRequestLog.GetExecutedCommandsAsString());
-            HystrixRequestLog reqLog = HystrixRequestLog.CurrentRequestLog;
+            var reqLog = HystrixRequestLog.CurrentRequestLog;
             Assert.Equal(3, reqLog.AllExecutedCommands.Count);
-            List<IHystrixInvokableInfo> infos = new List<IHystrixInvokableInfo>(reqLog.AllExecutedCommands);
-            IHystrixInvokableInfo info1 = infos[0];
+            var infos = new List<IHystrixInvokableInfo>(reqLog.AllExecutedCommands);
+            var info1 = infos[0];
             Assert.Equal("SuperCommand", info1.CommandKey.Name);
             Assert.Single(info1.ExecutionEvents);
-            IHystrixInvokableInfo info2 = infos[1];
+            var info2 = infos[1];
             Assert.Equal("SuperCommand", info2.CommandKey.Name);
             Assert.Equal(2, info2.ExecutionEvents.Count);
             Assert.Equal(HystrixEventType.RESPONSE_FROM_CACHE, info2.ExecutionEvents[1]);
-            IHystrixInvokableInfo info3 = infos[2];
+            var info3 = infos[2];
             Assert.Equal("SuperCommand", info3.CommandKey.Name);
             Assert.Single(info3.ExecutionEvents);
         }
@@ -80,18 +70,18 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             HystrixCommand<int> subCmd3 = new SubCommandNoOverride("no-cache", true);
             Assert.Equal(1, subCmd3.Execute());
             output.WriteLine("REQ LOG : " + HystrixRequestLog.CurrentRequestLog.GetExecutedCommandsAsString());
-            HystrixRequestLog reqLog = HystrixRequestLog.CurrentRequestLog;
+            var reqLog = HystrixRequestLog.CurrentRequestLog;
             Assert.Equal(3, reqLog.AllExecutedCommands.Count);
-            List<IHystrixInvokableInfo> infos = new List<IHystrixInvokableInfo>(reqLog.AllExecutedCommands);
+            var infos = new List<IHystrixInvokableInfo>(reqLog.AllExecutedCommands);
 
-            IHystrixInvokableInfo info1 = infos[0];
+            var info1 = infos[0];
             Assert.Equal("SubCommandNoOverride", info1.CommandKey.Name);
             Assert.Single(info1.ExecutionEvents);
-            IHystrixInvokableInfo info2 = infos[1];
+            var info2 = infos[1];
             Assert.Equal("SubCommandNoOverride", info2.CommandKey.Name);
             Assert.Equal(2, info2.ExecutionEvents.Count);
             Assert.Equal(HystrixEventType.RESPONSE_FROM_CACHE, info2.ExecutionEvents[1]);
-            IHystrixInvokableInfo info3 = infos[2];
+            var info3 = infos[2];
             Assert.Equal("SubCommandNoOverride", info3.CommandKey.Name);
             Assert.Single(info3.ExecutionEvents);
         }
@@ -102,9 +92,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             HystrixCommand<int> superCmd = new SuperCommand("cache", true);
             Assert.Equal(1, superCmd.Execute());
             output.WriteLine("REQ LOG : " + HystrixRequestLog.CurrentRequestLog.GetExecutedCommandsAsString());
-            HystrixRequestLog reqLog = HystrixRequestLog.CurrentRequestLog;
+            var reqLog = HystrixRequestLog.CurrentRequestLog;
             Assert.Equal(1, reqLog.AllExecutedCommands.Count);
-            IHystrixInvokableInfo info = reqLog.AllExecutedCommands.ToList()[0];
+            var info = reqLog.AllExecutedCommands.ToList()[0];
             Assert.Equal("SuperCommand", info.CommandKey.Name);
         }
 
@@ -114,9 +104,9 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             HystrixCommand<int> subCmd = new SubCommandNoOverride("cache", true);
             Assert.Equal(1, subCmd.Execute());
             output.WriteLine("REQ LOG : " + HystrixRequestLog.CurrentRequestLog.GetExecutedCommandsAsString());
-            HystrixRequestLog reqLog = HystrixRequestLog.CurrentRequestLog;
+            var reqLog = HystrixRequestLog.CurrentRequestLog;
             Assert.Equal(1, reqLog.AllExecutedCommands.Count);
-            IHystrixInvokableInfo info = reqLog.AllExecutedCommands.ToList()[0];
+            var info = reqLog.AllExecutedCommands.ToList()[0];
             Assert.Equal("SubCommandNoOverride", info.CommandKey.Name);
         }
 
@@ -130,7 +120,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             {
                 this.uniqueArg = uniqueArg;
                 this.shouldSucceed = shouldSucceed;
-                this.IsFallbackUserDefined = true;
+                IsFallbackUserDefined = true;
             }
 
             protected override int Run()
@@ -169,7 +159,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             public SubCommandOverrideFallback(string uniqueArg, bool shouldSucceed)
                 : base(uniqueArg, shouldSucceed)
             {
-                this.IsFallbackUserDefined = true;
+                IsFallbackUserDefined = true;
             }
 
             protected override int RunFallback()

@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Collapser;
 using Steeltoe.CircuitBreaker.Hystrix.Util;
@@ -46,7 +36,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestTwoRequests()
         {
             var timer = new TestCollapserTimer(output);
@@ -77,7 +66,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestMultipleBatches()
         {
             var timer = new TestCollapserTimer(output);
@@ -105,7 +93,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestMaxRequestsInBatch()
         {
             var timer = new TestCollapserTimer(output);
@@ -135,7 +122,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestsOverTime()
         {
             var timer = new TestCollapserTimer(output);
@@ -173,7 +159,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestDuplicateArgumentsWithRequestCachingOn()
         {
             var num = 10;
@@ -207,7 +192,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestDuplicateArgumentsWithRequestCachingOff()
         {
             var num = 10;
@@ -278,7 +262,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         // }
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestUnsubscribeFromSomeDuplicateArgsDoesNotRemoveFromBatch()
         {
             var num = 10;
@@ -331,7 +314,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestUnsubscribeOnOneDoesntKillBatch()
         {
             var timer = new TestCollapserTimer(output);
@@ -367,7 +349,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestShardedRequests()
         {
             var timer = new TestCollapserTimer(output);
@@ -392,7 +373,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestScope()
         {
             var timer = new TestCollapserTimer(output);
@@ -422,7 +402,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestGlobalScope()
         {
             var timer = new TestCollapserTimer(output);
@@ -450,7 +429,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestErrorHandlingViaFutureException()
         {
             var timer = new TestCollapserTimer(output);
@@ -485,7 +463,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestErrorHandlingWhenMapToResponseFails()
         {
             var timer = new TestCollapserTimer(output);
@@ -524,7 +501,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestVariableLifecycle1()
         {
             // do actual work
@@ -580,7 +556,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestVariableLifecycle2()
         {
             var timer = new TestCollapserTimer(output);
@@ -667,7 +642,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestCache1()
         {
             var timer = new TestCollapserTimer(output);
@@ -717,7 +691,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestCache2()
         {
             var timer = new TestCollapserTimer(output);
@@ -767,7 +740,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestCache3()
         {
             var timer = new TestCollapserTimer(output);
@@ -823,7 +795,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestNoRequestCache3()
         {
             var timer = new TestCollapserTimer(output);
@@ -888,7 +859,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestCacheWithNullRequestArgument()
         {
             var commands = new ConcurrentQueue<HystrixCommand<List<string>>>();
@@ -908,8 +878,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
             // it should have executed 1 command
             Assert.Single(commands);
-            HystrixCommand<List<string>> peek = null;
-            commands.TryPeek(out peek);
+            commands.TryPeek(out var peek);
             Assert.Contains(HystrixEventType.SUCCESS, peek.ExecutionEvents);
             Assert.Contains(HystrixEventType.COLLAPSED, peek.ExecutionEvents);
 
@@ -929,7 +898,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestCacheWithCommandError()
         {
             var commands = new ConcurrentQueue<HystrixCommand<List<string>>>();
@@ -957,8 +925,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
             // it should have executed 1 command
             Assert.Single(commands);
-            HystrixCommand<List<string>> peek = null;
-            commands.TryPeek(out peek);
+            commands.TryPeek(out var peek);
 
             Assert.Contains(HystrixEventType.FAILURE, peek.ExecutionEvents);
             Assert.Contains(HystrixEventType.COLLAPSED, peek.ExecutionEvents);
@@ -987,7 +954,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestCacheWithCommandTimeout()
         {
             var commands = new ConcurrentQueue<HystrixCommand<List<string>>>();
@@ -1015,8 +981,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
             // it should have executed 1 command
             Assert.Single(commands);
-            HystrixCommand<List<string>> peek = null;
-            commands.TryPeek(out peek);
+            commands.TryPeek(out var peek);
             Assert.Contains(HystrixEventType.TIMEOUT, peek.ExecutionEvents);
             Assert.Contains(HystrixEventType.COLLAPSED, peek.ExecutionEvents);
 
@@ -1044,7 +1009,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public async Task TestRequestWithCommandShortCircuited()
         {
             var timer = new TestCollapserTimer(output);
@@ -1085,7 +1049,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestVoidResponseTypeFireAndForgetCollapsing1()
         {
             var timer = new TestCollapserTimer(output);
@@ -1106,7 +1069,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestVoidResponseTypeFireAndForgetCollapsing2()
         {
             var timer = new TestCollapserTimer(output);
@@ -1134,7 +1096,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestVoidResponseTypeFireAndForgetCollapsing3()
         {
             ICollapserTimer timer = new RealCollapserTimer();
@@ -1148,7 +1109,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestEarlyUnsubscribeExecutedViaToObservable()
         {
             var timer = new TestCollapserTimer(output);
@@ -1229,7 +1189,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestEarlyUnsubscribeExecutedViaObserve()
         {
             var timer = new TestCollapserTimer(output);
@@ -1309,7 +1268,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestEarlyUnsubscribeFromAllCancelsBatch()
         {
             var timer = new TestCollapserTimer(output);
@@ -1386,7 +1344,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestThenCacheHitAndCacheHitUnsubscribed()
         {
             var timer = new TestCollapserTimer(output);
@@ -1466,7 +1423,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestThenCacheHitAndOriginalUnsubscribed()
         {
             // TODO:
@@ -1546,7 +1502,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
         public void TestRequestThenTwoCacheHitsOriginalAndOneCacheHitUnsubscribed()
         {
             var timer = new TestCollapserTimer(output);
@@ -1655,7 +1610,6 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnHostedAgents")]
 
         public void TestRequestThenTwoCacheHitsAllUnsubscribed()
         {
@@ -1816,7 +1770,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             }
             else
             {
-                return default(T);
+                return default;
             }
         }
 
@@ -1876,7 +1830,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 : base(CollapserKeyFromString(timer), scope, timer, GetOptions(CollapserKeyFromString(timer), defaultMaxRequestsInBatch, defaultTimerDelayInMilliseconds), CreateMetrics())
             {
                 this.value = value;
-                this.commandsExecuted = executionLog;
+                commandsExecuted = executionLog;
                 this.output = output;
             }
 
@@ -1945,9 +1899,11 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                     }
                 }
 
-                var shards = new List<ICollection<ICollapsedRequest<string, string>>>();
-                shards.Add(typeA);
-                shards.Add(typeB);
+                var shards = new List<ICollection<ICollapsedRequest<string, string>>>
+                {
+                    typeA,
+                    typeB
+                };
                 return shards;
             }
         }
@@ -2004,7 +1960,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         private class TestCollapserCommand : TestHystrixCommand<List<string>>
         {
             private readonly ICollection<ICollapsedRequest<string, string>> requests;
-            private ITestOutputHelper output;
+            private readonly ITestOutputHelper output;
 
             public TestCollapserCommand(ITestOutputHelper output, ICollection<ICollapsedRequest<string, string>> requests)
                 : base(TestPropsBuilder().SetCommandOptionDefaults(GetCommandOptions()))
@@ -2093,7 +2049,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         private class ShortCircuitedCommand : HystrixCommand<List<string>>
         {
-            private ITestOutputHelper output;
+            private readonly ITestOutputHelper output;
 
             public ShortCircuitedCommand(ITestOutputHelper output)
                 : base(GetCommandOptions())
@@ -2106,8 +2062,10 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 output.WriteLine("*** execution (this shouldn't happen)");
 
                 // this won't ever get called as we're forcing short-circuiting
-                var values = new List<string>();
-                values.Add("hello");
+                var values = new List<string>
+                {
+                    "hello"
+                };
                 return values;
             }
 
@@ -2124,7 +2082,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         private class FireAndForgetCommand : HystrixCommand<object>
         {
-            private ITestOutputHelper output;
+            private readonly ITestOutputHelper output;
 
             public FireAndForgetCommand(ITestOutputHelper output, List<int> values)
                 : base(GetCommandOptions())
@@ -2150,8 +2108,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         private class TestCollapserTimer : ICollapserTimer
         {
             public readonly ConcurrentDictionary<ATask, ATask> Tasks = new ConcurrentDictionary<ATask, ATask>();
-            private object _lock = new object();
-            private ITestOutputHelper output;
+            private readonly object _lock = new object();
+            private readonly ITestOutputHelper output;
 
             public TestCollapserTimer(ITestOutputHelper output)
             {
@@ -2182,7 +2140,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         private class TestTimerReference : TimerReference
         {
-            private TestCollapserTimer ctimer;
+            private readonly TestCollapserTimer ctimer;
 
             public TestTimerReference(TestCollapserTimer ctimer, ITimerListener listener, TimeSpan period)
                 : base(listener, period)
@@ -2195,7 +2153,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 // Called when context is disposed
                 foreach (var v in ctimer.Tasks.Values)
                 {
-                    if (v.Task == this._listener)
+                    if (v.Task == _listener)
                     {
                         _ = ctimer.Tasks.TryRemove(v, out var removed);
                     }
@@ -2213,8 +2171,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
             public volatile int Time = 0;
             public volatile int ExecutionCount = 0;
             private readonly int delay = 10;
-            private object _lock = new object();
-            private ITestOutputHelper output;
+            private readonly object _lock = new object();
+            private readonly ITestOutputHelper output;
 
             public ATask(ITestOutputHelper output, TestTimerListener task)
             {
@@ -2257,8 +2215,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
                 {
                     output.WriteLine("Executing task ...");
                     Task.Tick();
-                    this.Time = 0; // we reset time after each execution
-                    this.ExecutionCount++;
+                    Time = 0; // we reset time after each execution
+                    ExecutionCount++;
                     output.WriteLine("executionCount: " + ExecutionCount);
                 }
             }
@@ -2271,7 +2229,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
             public TestTimerListener(ITimerListener actual)
             {
-                this.ActualListener = actual;
+                ActualListener = actual;
             }
 
             public void Tick()
@@ -2291,7 +2249,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         private class TestCollapserWithVoidResponseType : HystrixCollapser<object, object, int>
         {
             private readonly int value;
-            private ITestOutputHelper output;
+            private readonly ITestOutputHelper output;
 
             public TestCollapserWithVoidResponseType(ITestOutputHelper output, ICollapserTimer timer, int value)
                 : base(CollapserKeyFromString(timer), RequestCollapserScope.REQUEST, timer, GetCollapserOptions(CollapserKeyFromString(timer)))
@@ -2335,7 +2293,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         private class TestCollapserWithVoidResponseTypeAndMissingMapResponseToRequests : HystrixCollapser<object, object, int>
         {
             private readonly int value;
-            private ITestOutputHelper output;
+            private readonly ITestOutputHelper output;
 
             public TestCollapserWithVoidResponseTypeAndMissingMapResponseToRequests(ITestOutputHelper output, ICollapserTimer timer, int value)
                 : base(CollapserKeyFromString(timer), RequestCollapserScope.REQUEST, timer, GetCollapserOptions(CollapserKeyFromString(timer)))
@@ -2387,7 +2345,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         private class MyCommand : HystrixCommand<List<Pair<string, int>>>
         {
             private readonly List<string> args;
-            private ITestOutputHelper output;
+            private readonly ITestOutputHelper output;
 
             public MyCommand(ITestOutputHelper output, List<string> args)
                 : base(GetCommandOptions())
@@ -2421,7 +2379,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
         private class MyCollapser : HystrixCollapser<List<Pair<string, int>>, int, string>
         {
             private readonly string arg;
-            private ITestOutputHelper output;
+            private readonly ITestOutputHelper output;
 
             public MyCollapser(ITestOutputHelper output, string arg, bool reqCacheEnabled)
                 : base(
@@ -2498,15 +2456,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Test
 
         private class TestSubscriber<T> : ObserverBase<T>, IDisposable
         {
-            private CountdownEvent latch = new CountdownEvent(1);
-            private ITestOutputHelper output;
+            private readonly CountdownEvent latch = new CountdownEvent(1);
+            private readonly ITestOutputHelper output;
             private int completions = 0;
 
             public TestSubscriber(ITestOutputHelper output)
             {
                 this.output = output;
-                this.OnNextEvents = new List<T>();
-                this.OnErrorEvents = new List<Exception>();
+                OnNextEvents = new List<T>();
+                OnErrorEvents = new List<Exception>();
             }
 
             public void Unsubscribe()

@@ -1,21 +1,10 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Steeltoe.Common.HealthChecks;
-using Steeltoe.Connector.Relational;
 using Steeltoe.Extensions.Configuration.CloudFoundry;
 using System;
 using System.Collections.Generic;
@@ -43,10 +32,10 @@ namespace Steeltoe.Connector.SqlServer.Test
             IConfigurationRoot config = null;
 
             // Act and Assert
-            var ex = Assert.Throws<ArgumentNullException>(() => SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config));
+            var ex = Assert.Throws<ArgumentNullException>(() => services.AddSqlServerConnection(config));
             Assert.Contains(nameof(services), ex.Message);
 
-            var ex2 = Assert.Throws<ArgumentNullException>(() => SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config, "foobar"));
+            var ex2 = Assert.Throws<ArgumentNullException>(() => services.AddSqlServerConnection(config, "foobar"));
             Assert.Contains(nameof(services), ex2.Message);
         }
 
@@ -58,10 +47,10 @@ namespace Steeltoe.Connector.SqlServer.Test
             IConfigurationRoot config = null;
 
             // Act and Assert
-            var ex = Assert.Throws<ArgumentNullException>(() => SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config));
+            var ex = Assert.Throws<ArgumentNullException>(() => services.AddSqlServerConnection(config));
             Assert.Contains(nameof(config), ex.Message);
 
-            var ex2 = Assert.Throws<ArgumentNullException>(() => SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config, "foobar"));
+            var ex2 = Assert.Throws<ArgumentNullException>(() => services.AddSqlServerConnection(config, "foobar"));
             Assert.Contains(nameof(config), ex2.Message);
         }
 
@@ -74,7 +63,7 @@ namespace Steeltoe.Connector.SqlServer.Test
             string serviceName = null;
 
             // Act and Assert
-            var ex = Assert.Throws<ArgumentNullException>(() => SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config, serviceName));
+            var ex = Assert.Throws<ArgumentNullException>(() => services.AddSqlServerConnection(config, serviceName));
             Assert.Contains(nameof(serviceName), ex.Message);
         }
 
@@ -100,7 +89,7 @@ namespace Steeltoe.Connector.SqlServer.Test
             var config = new ConfigurationBuilder().Build();
 
             // Act and Assert
-            var ex = Assert.Throws<ConnectorException>(() => SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config, "foobar"));
+            var ex = Assert.Throws<ConnectorException>(() => services.AddSqlServerConnection(config, "foobar"));
             Assert.Contains("foobar", ex.Message);
         }
 
@@ -117,7 +106,7 @@ namespace Steeltoe.Connector.SqlServer.Test
             var config = builder.Build();
 
             // Act and Assert
-            var ex = Assert.Throws<ConnectorException>(() => SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config));
+            var ex = Assert.Throws<ConnectorException>(() => services.AddSqlServerConnection(config));
             Assert.Contains("Multiple", ex.Message);
         }
 
@@ -135,7 +124,7 @@ namespace Steeltoe.Connector.SqlServer.Test
             var config = builder.Build();
 
             // Act and Assert
-            SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config);
+            services.AddSqlServerConnection(config);
 
             var service = services.BuildServiceProvider().GetService<IDbConnection>();
             Assert.NotNull(service);
@@ -161,7 +150,7 @@ namespace Steeltoe.Connector.SqlServer.Test
             var config = builder.Build();
 
             // Act and Assert
-            SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config);
+            services.AddSqlServerConnection(config);
 
             var service = services.BuildServiceProvider().GetService<IDbConnection>();
             Assert.NotNull(service);
@@ -178,17 +167,14 @@ namespace Steeltoe.Connector.SqlServer.Test
             IServiceCollection services = new ServiceCollection();
             Environment.SetEnvironmentVariable("VCAP_APPLICATION", TestHelpers.VCAP_APPLICATION);
             Environment.SetEnvironmentVariable("VCAP_SERVICES", SqlServerTestHelpers.SingleServerAzureVCAP);
-            var appsettings = new Dictionary<string, string>()
-            {
-                ["sqlserver:client:urlEncodedCredentials"] = "true"
-            };
+            var appsettings = new Dictionary<string, string>();
             var builder = new ConfigurationBuilder();
             builder.AddCloudFoundry();
             builder.AddInMemoryCollection(appsettings);
             var config = builder.Build();
 
             // Act and Assert
-            SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config);
+            services.AddSqlServerConnection(config);
 
             var service = services.BuildServiceProvider().GetService<IDbConnection>();
             Assert.NotNull(service);
@@ -213,8 +199,8 @@ namespace Steeltoe.Connector.SqlServer.Test
             var config = builder.Build();
 
             // Act
-            SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config);
-            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalHealthContributor;
+            services.AddSqlServerConnection(config);
+            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalDbHealthContributor;
 
             // Assert
             Assert.NotNull(healthContributor);
@@ -234,8 +220,8 @@ namespace Steeltoe.Connector.SqlServer.Test
             services.AddHealthChecks().AddSqlServer(ci.ConnectionString, name: ci.Name);
 
             // Act
-            SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config);
-            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalHealthContributor;
+            services.AddSqlServerConnection(config);
+            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalDbHealthContributor;
 
             // Assert
             Assert.Null(healthContributor);
@@ -255,8 +241,8 @@ namespace Steeltoe.Connector.SqlServer.Test
             services.AddHealthChecks().AddSqlServer(ci.ConnectionString, name: ci.Name);
 
             // Act
-            SqlServerProviderServiceCollectionExtensions.AddSqlServerConnection(services, config, addSteeltoeHealthChecks: true);
-            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalHealthContributor;
+            services.AddSqlServerConnection(config, addSteeltoeHealthChecks: true);
+            var healthContributor = services.BuildServiceProvider().GetService<IHealthContributor>() as RelationalDbHealthContributor;
 
             // Assert
             Assert.NotNull(healthContributor);

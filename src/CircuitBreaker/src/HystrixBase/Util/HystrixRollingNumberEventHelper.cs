@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -19,77 +9,55 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Util
 {
     internal static class HystrixRollingNumberEventHelper
     {
-        private static readonly IList<HystrixRollingNumberEvent> _valueList = new List<HystrixRollingNumberEvent>();
-
         static HystrixRollingNumberEventHelper()
         {
-            _valueList.Add(HystrixRollingNumberEvent.SUCCESS);
-            _valueList.Add(HystrixRollingNumberEvent.FAILURE);
-            _valueList.Add(HystrixRollingNumberEvent.TIMEOUT);
-            _valueList.Add(HystrixRollingNumberEvent.SHORT_CIRCUITED);
-            _valueList.Add(HystrixRollingNumberEvent.THREAD_POOL_REJECTED);
-            _valueList.Add(HystrixRollingNumberEvent.SEMAPHORE_REJECTED);
-            _valueList.Add(HystrixRollingNumberEvent.BAD_REQUEST);
-            _valueList.Add(HystrixRollingNumberEvent.FALLBACK_SUCCESS);
-            _valueList.Add(HystrixRollingNumberEvent.FALLBACK_FAILURE);
-            _valueList.Add(HystrixRollingNumberEvent.FALLBACK_REJECTION);
-            _valueList.Add(HystrixRollingNumberEvent.FALLBACK_MISSING);
-            _valueList.Add(HystrixRollingNumberEvent.EXCEPTION_THROWN);
-            _valueList.Add(HystrixRollingNumberEvent.COMMAND_MAX_ACTIVE);
-            _valueList.Add(HystrixRollingNumberEvent.EMIT);
-            _valueList.Add(HystrixRollingNumberEvent.FALLBACK_EMIT);
-            _valueList.Add(HystrixRollingNumberEvent.THREAD_EXECUTION);
-            _valueList.Add(HystrixRollingNumberEvent.THREAD_MAX_ACTIVE);
-            _valueList.Add(HystrixRollingNumberEvent.COLLAPSED);
-            _valueList.Add(HystrixRollingNumberEvent.RESPONSE_FROM_CACHE);
-            _valueList.Add(HystrixRollingNumberEvent.COLLAPSER_REQUEST_BATCHED);
-            _valueList.Add(HystrixRollingNumberEvent.COLLAPSER_BATCH);
+            Values.Add(HystrixRollingNumberEvent.SUCCESS);
+            Values.Add(HystrixRollingNumberEvent.FAILURE);
+            Values.Add(HystrixRollingNumberEvent.TIMEOUT);
+            Values.Add(HystrixRollingNumberEvent.SHORT_CIRCUITED);
+            Values.Add(HystrixRollingNumberEvent.THREAD_POOL_REJECTED);
+            Values.Add(HystrixRollingNumberEvent.SEMAPHORE_REJECTED);
+            Values.Add(HystrixRollingNumberEvent.BAD_REQUEST);
+            Values.Add(HystrixRollingNumberEvent.FALLBACK_SUCCESS);
+            Values.Add(HystrixRollingNumberEvent.FALLBACK_FAILURE);
+            Values.Add(HystrixRollingNumberEvent.FALLBACK_REJECTION);
+            Values.Add(HystrixRollingNumberEvent.FALLBACK_MISSING);
+            Values.Add(HystrixRollingNumberEvent.EXCEPTION_THROWN);
+            Values.Add(HystrixRollingNumberEvent.COMMAND_MAX_ACTIVE);
+            Values.Add(HystrixRollingNumberEvent.EMIT);
+            Values.Add(HystrixRollingNumberEvent.FALLBACK_EMIT);
+            Values.Add(HystrixRollingNumberEvent.THREAD_EXECUTION);
+            Values.Add(HystrixRollingNumberEvent.THREAD_MAX_ACTIVE);
+            Values.Add(HystrixRollingNumberEvent.COLLAPSED);
+            Values.Add(HystrixRollingNumberEvent.RESPONSE_FROM_CACHE);
+            Values.Add(HystrixRollingNumberEvent.COLLAPSER_REQUEST_BATCHED);
+            Values.Add(HystrixRollingNumberEvent.COLLAPSER_BATCH);
         }
 
-        public static IList<HystrixRollingNumberEvent> Values
-        {
-            get { return _valueList; }
-        }
+        public static IList<HystrixRollingNumberEvent> Values { get; } = new List<HystrixRollingNumberEvent>();
 
         public static HystrixRollingNumberEvent From(HystrixEventType eventType)
         {
-            switch (eventType)
+            return eventType switch
             {
-                case HystrixEventType.BAD_REQUEST:
-                    return HystrixRollingNumberEvent.BAD_REQUEST;
-                case HystrixEventType.COLLAPSED:
-                    return HystrixRollingNumberEvent.COLLAPSED;
-                case HystrixEventType.EMIT:
-                    return HystrixRollingNumberEvent.EMIT;
-                case HystrixEventType.EXCEPTION_THROWN:
-                    return HystrixRollingNumberEvent.EXCEPTION_THROWN;
-                case HystrixEventType.FAILURE:
-                    return HystrixRollingNumberEvent.FAILURE;
-                case HystrixEventType.FALLBACK_EMIT:
-                    return HystrixRollingNumberEvent.FALLBACK_EMIT;
-                case HystrixEventType.FALLBACK_FAILURE:
-                    return HystrixRollingNumberEvent.FALLBACK_FAILURE;
-                case HystrixEventType.FALLBACK_MISSING:
-                    return HystrixRollingNumberEvent.FALLBACK_MISSING;
-                case HystrixEventType.FALLBACK_REJECTION:
-                    return HystrixRollingNumberEvent.FALLBACK_REJECTION;
-                case HystrixEventType.FALLBACK_SUCCESS:
-                    return HystrixRollingNumberEvent.FALLBACK_SUCCESS;
-                case HystrixEventType.RESPONSE_FROM_CACHE:
-                    return HystrixRollingNumberEvent.RESPONSE_FROM_CACHE;
-                case HystrixEventType.SEMAPHORE_REJECTED:
-                    return HystrixRollingNumberEvent.SEMAPHORE_REJECTED;
-                case HystrixEventType.SHORT_CIRCUITED:
-                    return HystrixRollingNumberEvent.SHORT_CIRCUITED;
-                case HystrixEventType.SUCCESS:
-                    return HystrixRollingNumberEvent.SUCCESS;
-                case HystrixEventType.THREAD_POOL_REJECTED:
-                    return HystrixRollingNumberEvent.THREAD_POOL_REJECTED;
-                case HystrixEventType.TIMEOUT:
-                    return HystrixRollingNumberEvent.TIMEOUT;
-                default:
-                    throw new ArgumentOutOfRangeException("Unknown HystrixEventType : " + eventType);
-            }
+                HystrixEventType.BAD_REQUEST => HystrixRollingNumberEvent.BAD_REQUEST,
+                HystrixEventType.COLLAPSED => HystrixRollingNumberEvent.COLLAPSED,
+                HystrixEventType.EMIT => HystrixRollingNumberEvent.EMIT,
+                HystrixEventType.EXCEPTION_THROWN => HystrixRollingNumberEvent.EXCEPTION_THROWN,
+                HystrixEventType.FAILURE => HystrixRollingNumberEvent.FAILURE,
+                HystrixEventType.FALLBACK_EMIT => HystrixRollingNumberEvent.FALLBACK_EMIT,
+                HystrixEventType.FALLBACK_FAILURE => HystrixRollingNumberEvent.FALLBACK_FAILURE,
+                HystrixEventType.FALLBACK_MISSING => HystrixRollingNumberEvent.FALLBACK_MISSING,
+                HystrixEventType.FALLBACK_REJECTION => HystrixRollingNumberEvent.FALLBACK_REJECTION,
+                HystrixEventType.FALLBACK_SUCCESS => HystrixRollingNumberEvent.FALLBACK_SUCCESS,
+                HystrixEventType.RESPONSE_FROM_CACHE => HystrixRollingNumberEvent.RESPONSE_FROM_CACHE,
+                HystrixEventType.SEMAPHORE_REJECTED => HystrixRollingNumberEvent.SEMAPHORE_REJECTED,
+                HystrixEventType.SHORT_CIRCUITED => HystrixRollingNumberEvent.SHORT_CIRCUITED,
+                HystrixEventType.SUCCESS => HystrixRollingNumberEvent.SUCCESS,
+                HystrixEventType.THREAD_POOL_REJECTED => HystrixRollingNumberEvent.THREAD_POOL_REJECTED,
+                HystrixEventType.TIMEOUT => HystrixRollingNumberEvent.TIMEOUT,
+                _ => throw new ArgumentOutOfRangeException("Unknown HystrixEventType : " + eventType),
+            };
         }
 
         public static bool IsCounter(HystrixRollingNumberEvent @event)

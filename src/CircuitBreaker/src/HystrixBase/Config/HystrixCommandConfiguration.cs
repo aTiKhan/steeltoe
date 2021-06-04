@@ -1,22 +1,12 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 namespace Steeltoe.CircuitBreaker.Hystrix.Config
 {
     public class HystrixCommandConfiguration
     {
-        private readonly IHystrixCommandKey commandKey;
+        private readonly IHystrixCommandKey _commandKey;
 
         public HystrixCommandConfiguration(
             IHystrixCommandKey commandKey,
@@ -26,7 +16,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
             HystrixCommandCircuitBreakerConfig circuitBreakerConfig,
             HystrixCommandMetricsConfig metricsConfig)
         {
-            this.commandKey = commandKey;
+            _commandKey = commandKey;
             ThreadPoolKey = threadPoolKey;
             GroupKey = groupKey;
             ExecutionConfig = executionConfig;
@@ -40,7 +30,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
             IHystrixCommandGroupKey groupKey,
             IHystrixCommandOptions commandProperties)
         {
-            HystrixCommandExecutionConfig executionConfig = new HystrixCommandExecutionConfig(
+            var executionConfig = new HystrixCommandExecutionConfig(
                     commandProperties.ExecutionIsolationSemaphoreMaxConcurrentRequests,
                     commandProperties.ExecutionIsolationStrategy,
                     false,
@@ -52,7 +42,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
                     commandProperties.RequestCacheEnabled,
                     commandProperties.RequestLogEnabled);
 
-            HystrixCommandCircuitBreakerConfig circuitBreakerConfig = new HystrixCommandCircuitBreakerConfig(
+            var circuitBreakerConfig = new HystrixCommandCircuitBreakerConfig(
                     commandProperties.CircuitBreakerEnabled,
                     commandProperties.CircuitBreakerErrorThresholdPercentage,
                     commandProperties.CircuitBreakerForceClosed,
@@ -60,7 +50,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Config
                     commandProperties.CircuitBreakerRequestVolumeThreshold,
                     commandProperties.CircuitBreakerSleepWindowInMilliseconds);
 
-            HystrixCommandMetricsConfig metricsConfig = new HystrixCommandMetricsConfig(
+            var metricsConfig = new HystrixCommandMetricsConfig(
                     commandProperties.MetricsHealthSnapshotIntervalInMilliseconds,
                     commandProperties.MetricsRollingPercentileEnabled,
                     commandProperties.MetricsRollingPercentileWindowBuckets,

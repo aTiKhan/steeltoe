@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Util;
 using System;
@@ -20,49 +10,35 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 {
     public static class ThreadPoolEventTypeHelper
     {
-        private static readonly IList<ThreadPoolEventType> ValueList = new List<ThreadPoolEventType>();
-
-        public static IList<ThreadPoolEventType> Values
-        {
-            get { return ValueList; }
-        }
+        public static IList<ThreadPoolEventType> Values { get; } = new List<ThreadPoolEventType>();
 
         static ThreadPoolEventTypeHelper()
         {
-            ValueList.Add(ThreadPoolEventType.EXECUTED);
-            ValueList.Add(ThreadPoolEventType.REJECTED);
+            Values.Add(ThreadPoolEventType.EXECUTED);
+            Values.Add(ThreadPoolEventType.REJECTED);
         }
 
         public static ThreadPoolEventType From(this HystrixRollingNumberEvent @event)
         {
-            switch (@event)
+            return @event switch
             {
-                case HystrixRollingNumberEvent.THREAD_EXECUTION:
-                    return ThreadPoolEventType.EXECUTED;
-                case HystrixRollingNumberEvent.THREAD_POOL_REJECTED:
-                    return ThreadPoolEventType.REJECTED;
-                default:
-                    throw new ArgumentOutOfRangeException("Not an event that can be converted to HystrixEventType.ThreadPool : " + @event);
-            }
+                HystrixRollingNumberEvent.THREAD_EXECUTION => ThreadPoolEventType.EXECUTED,
+                HystrixRollingNumberEvent.THREAD_POOL_REJECTED => ThreadPoolEventType.REJECTED,
+                _ => throw new ArgumentOutOfRangeException("Not an event that can be converted to HystrixEventType.ThreadPool : " + @event),
+            };
         }
 
         public static ThreadPoolEventType From(this HystrixEventType eventType)
         {
-            switch (eventType)
+            return eventType switch
             {
-                case HystrixEventType.SUCCESS:
-                    return ThreadPoolEventType.EXECUTED;
-                case HystrixEventType.FAILURE:
-                    return ThreadPoolEventType.EXECUTED;
-                case HystrixEventType.TIMEOUT:
-                    return ThreadPoolEventType.EXECUTED;
-                case HystrixEventType.BAD_REQUEST:
-                    return ThreadPoolEventType.EXECUTED;
-                case HystrixEventType.THREAD_POOL_REJECTED:
-                    return ThreadPoolEventType.REJECTED;
-                default:
-                    return ThreadPoolEventType.UNKNOWN;
-            }
+                HystrixEventType.SUCCESS => ThreadPoolEventType.EXECUTED,
+                HystrixEventType.FAILURE => ThreadPoolEventType.EXECUTED,
+                HystrixEventType.TIMEOUT => ThreadPoolEventType.EXECUTED,
+                HystrixEventType.BAD_REQUEST => ThreadPoolEventType.EXECUTED,
+                HystrixEventType.THREAD_POOL_REJECTED => ThreadPoolEventType.REJECTED,
+                _ => ThreadPoolEventType.UNKNOWN,
+            };
         }
     }
 }

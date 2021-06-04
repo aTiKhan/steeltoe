@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -20,12 +10,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Steeltoe.Common;
 using Steeltoe.Extensions.Logging;
+using Steeltoe.Management.Endpoint.CloudFoundry;
+using Steeltoe.Management.Endpoint.Hypermedia;
 using Steeltoe.Management.Endpoint.Test;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Steeltoe.Management.Endpoint.HeapDump.Test
@@ -39,17 +33,17 @@ namespace Steeltoe.Management.Endpoint.HeapDump.Test
             ["Logging:LogLevel:Pivotal"] = "Information",
             ["Logging:LogLevel:Steeltoe"] = "Information",
             ["management:endpoints:enabled"] = "true",
-            ["management:endpoints:path"] = "/cloudfoundryapplication",
             ["management:endpoints:heapdump:enabled"] = "true"
         };
 
         [Fact]
-        public async void HandleHeapDumpRequestAsync_ReturnsExpected()
+        public async Task HandleHeapDumpRequestAsync_ReturnsExpected()
         {
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            if (EndpointServiceCollectionExtensions.IsHeapDumpSupported())
             {
                 var opts = new HeapDumpEndpointOptions();
-                var mopts = TestHelper.GetManagementOptions(opts);
+                var mopts = new ActuatorManagementOptions();
+                mopts.EndpointOptions.Add(opts);
 
                 IServiceCollection serviceCollection = new ServiceCollection();
                 serviceCollection.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Trace));
@@ -58,8 +52,15 @@ namespace Steeltoe.Management.Endpoint.HeapDump.Test
                 var logger1 = loggerFactory.CreateLogger<WindowsHeapDumper>();
                 var logger2 = loggerFactory.CreateLogger<HeapDumpEndpoint>();
                 var logger3 = loggerFactory.CreateLogger<HeapDumpEndpointMiddleware>();
+                var logger4 = loggerFactory.CreateLogger<HeapDumper>();
 
-                var obs = new WindowsHeapDumper(opts, logger: logger1);
+                // WindowsHeapDumper should be used with .NET Core 3.1 on Windows. HeapDumper should be used with Linux and .NET 5 on Windows
+                var obs = (Platform.IsWindows && RuntimeInformation.FrameworkDescription.StartsWith(".NET Core", StringComparison.InvariantCultureIgnoreCase))
+                            ? new WindowsHeapDumper(opts, logger: logger1)
+                            : !Platform.IsOSX
+                                ? (IHeapDumper)new HeapDumper(opts, logger: logger4)
+                                : throw new InvalidOperationException("Unsupported Platfornm");
+
                 var ep = new HeapDumpEndpoint(opts, obs, logger2);
                 var middle = new HeapDumpEndpointMiddleware(null, ep, mopts, logger3);
                 var context = CreateRequest("GET", "/heapdump");
@@ -69,10 +70,6 @@ namespace Steeltoe.Management.Endpoint.HeapDump.Test
                 await context.Response.Body.ReadAsync(buffer, 0, 1024);
                 Assert.NotEqual(0, buffer[0]);
             }
-            else if (Platform.IsLinux)
-            {
-                // TODO: Make a request and verify
-            }
             else
             {
                 return;
@@ -80,7 +77,7 @@ namespace Steeltoe.Management.Endpoint.HeapDump.Test
         }
 
         [Fact]
-        public async void HeapDumpActuator_ReturnsExpectedData()
+        public async Task HeapDumpActuator_ReturnsExpectedData()
         {
             if (EndpointServiceCollectionExtensions.IsHeapDumpSupported())
             {
@@ -92,56 +89,37 @@ namespace Steeltoe.Management.Endpoint.HeapDump.Test
                     loggingBuilder.AddConfiguration(webhostContext.Configuration);
                     loggingBuilder.AddDynamicConsole();
                 });
-                using (var server = new TestServer(builder))
-                {
-                    var client = server.CreateClient();
-                    var result = await client.GetAsync("http://localhost/cloudfoundryapplication/heapdump");
-                    Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+                using var server = new TestServer(builder);
+                var client = server.CreateClient();
+                var result = await client.GetAsync("http://localhost/cloudfoundryapplication/heapdump");
+                Assert.Equal(HttpStatusCode.OK, result.StatusCode);
 
-                    Assert.True(result.Content.Headers.Contains("Content-Type"));
-                    var contentType = result.Content.Headers.GetValues("Content-Type");
-                    Assert.Equal("application/octet-stream", contentType.Single());
-                    Assert.True(result.Content.Headers.Contains("Content-Disposition"));
+                Assert.True(result.Content.Headers.Contains("Content-Type"));
+                var contentType = result.Content.Headers.GetValues("Content-Type");
+                Assert.Equal("application/octet-stream", contentType.Single());
+                Assert.True(result.Content.Headers.Contains("Content-Disposition"));
 
-                    var tempFile = Path.GetTempFileName();
-                    var fs = new FileStream(tempFile, FileMode.Create);
-                    var input = await result.Content.ReadAsStreamAsync();
-                    await input.CopyToAsync(fs);
-                    fs.Close();
+                var tempFile = Path.GetTempFileName();
+                var fs = new FileStream(tempFile, FileMode.Create);
+                var input = await result.Content.ReadAsStreamAsync();
+                await input.CopyToAsync(fs);
+                fs.Close();
 
-                    var fs2 = File.Open(tempFile, FileMode.Open);
-                    Assert.NotEqual(0, fs2.Length);
-                    fs2.Close();
-                    File.Delete(tempFile);
-                }
+                var fs2 = File.Open(tempFile, FileMode.Open);
+                Assert.NotEqual(0, fs2.Length);
+                fs2.Close();
+                File.Delete(tempFile);
             }
         }
 
         [Fact]
-        public void HeapDumpEndpointMiddleware_PathAndVerbMatching_ReturnsExpected()
+        public void RoutesByPathAndVerb()
         {
-            var opts = new HeapDumpEndpointOptions();
-            var mopts = TestHelper.GetManagementOptions(opts);
-            IHeapDumper obs;
-            if (Platform.IsWindows)
-            {
-                obs = new WindowsHeapDumper(opts);
-            }
-            else if (Platform.IsLinux)
-            {
-                obs = new LinuxHeapDumper(opts);
-            }
-            else
-            {
-                return;
-            }
-
-            var ep = new HeapDumpEndpoint(opts, obs);
-            var middle = new HeapDumpEndpointMiddleware(null, ep, mopts);
-
-            Assert.True(middle.RequestVerbAndPathMatch("GET", "/cloudfoundryapplication/heapdump"));
-            Assert.False(middle.RequestVerbAndPathMatch("PUT", "/cloudfoundryapplication/heapdump"));
-            Assert.False(middle.RequestVerbAndPathMatch("GET", "/cloudfoundryapplication/badpath"));
+            var options = new HeapDumpEndpointOptions();
+            Assert.True(options.ExactMatch);
+            Assert.Equal("/actuator/heapdump", options.GetContextPath(new ActuatorManagementOptions()));
+            Assert.Equal("/cloudfoundryapplication/heapdump", options.GetContextPath(new CloudFoundryManagementOptions()));
+            Assert.Null(options.AllowedVerbs);
         }
 
         private HttpContext CreateRequest(string method, string path)

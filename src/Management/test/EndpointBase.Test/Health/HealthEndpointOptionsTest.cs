@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
 using Steeltoe.Management.Endpoint.CloudFoundry;
@@ -51,7 +41,10 @@ namespace Steeltoe.Management.Endpoint.Health.Test
                 ["management:endpoints:health:enabled"] = "true",
                 ["management:endpoints:health:requiredPermissions"] = "NONE",
                 ["management:endpoints:cloudfoundry:validatecertificates"] = "true",
-                ["management:endpoints:cloudfoundry:enabled"] = "true"
+                ["management:endpoints:cloudfoundry:enabled"] = "true",
+                ["management:endpoints:health:groups:custom:include"] = "diskSpace",
+                ["management:endpoints:health:groups:lIveness:include"] = "diskSpace",
+                ["management:endpoints:health:groups:rEadinEss:include"] = "diskSpace"
             };
             ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.AddInMemoryCollection(appsettings);
@@ -69,6 +62,10 @@ namespace Steeltoe.Management.Endpoint.Health.Test
             Assert.Equal("health", opts.Id);
             Assert.Equal("health", opts.Path);
             Assert.Equal(Permissions.NONE, opts.RequiredPermissions);
+            Assert.Equal(3, opts.Groups.Count);
+            Assert.True(opts.Groups.ContainsKey("custom"));
+            Assert.True(opts.Groups.ContainsKey("liveness"));
+            Assert.True(opts.Groups.ContainsKey("READINESS"));
         }
 
         [Fact]

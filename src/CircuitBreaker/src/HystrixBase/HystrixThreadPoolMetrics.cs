@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.CircuitBreaker.Hystrix.Metric;
 using Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer;
@@ -40,14 +30,14 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public static HystrixThreadPoolMetrics GetInstance(IHystrixThreadPoolKey key)
         {
-            Metrics.TryGetValue(key.Name, out HystrixThreadPoolMetrics result);
+            Metrics.TryGetValue(key.Name, out var result);
             return result;
         }
 
         public static ICollection<HystrixThreadPoolMetrics> GetInstances()
         {
-            List<HystrixThreadPoolMetrics> threadPoolMetrics = new List<HystrixThreadPoolMetrics>();
-            foreach (HystrixThreadPoolMetrics tpm in Metrics.Values)
+            var threadPoolMetrics = new List<HystrixThreadPoolMetrics>();
+            foreach (var tpm in Metrics.Values)
             {
                 if (HasExecutedCommandsOnThread(tpm))
                 {
@@ -65,14 +55,14 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public static Func<long[], HystrixCommandCompletion, long[]> AppendEventToBucket { get; } = (initialCountArray, execution) =>
         {
-            ExecutionResult.EventCounts eventCounts = execution.Eventcounts;
-            foreach (HystrixEventType eventType in ALL_COMMAND_EVENT_TYPES)
+            var eventCounts = execution.Eventcounts;
+            foreach (var eventType in ALL_COMMAND_EVENT_TYPES)
             {
                 long eventCount = eventCounts.GetCount(eventType);
-                ThreadPoolEventType threadPoolEventType = ThreadPoolEventTypeHelper.From(eventType);
+                var threadPoolEventType = ThreadPoolEventTypeHelper.From(eventType);
                 if (threadPoolEventType != ThreadPoolEventType.UNKNOWN)
                 {
-                    long ordinal = (long)threadPoolEventType;
+                    var ordinal = (long)threadPoolEventType;
                     initialCountArray[ordinal] += eventCount;
                 }
             }
@@ -82,7 +72,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public static Func<long[], long[], long[]> CounterAggregator { get; } = (cumulativeEvents, bucketEventCounts) =>
         {
-            for (int i = 0; i < NUMBER_THREADPOOL_EVENT_TYPES; i++)
+            for (var i = 0; i < NUMBER_THREADPOOL_EVENT_TYPES; i++)
             {
                 cumulativeEvents[i] += bucketEventCounts[i];
             }
@@ -99,11 +89,11 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             Metrics.Clear();
         }
 
-        private readonly AtomicInteger concurrentExecutionCount = new AtomicInteger();
+        private readonly AtomicInteger _concurrentExecutionCount = new AtomicInteger();
 
-        private readonly RollingThreadPoolEventCounterStream rollingCounterStream;
-        private readonly CumulativeThreadPoolEventCounterStream cumulativeCounterStream;
-        private readonly RollingThreadPoolMaxConcurrencyStream rollingThreadPoolMaxConcurrencyStream;
+        private readonly RollingThreadPoolEventCounterStream _rollingCounterStream;
+        private readonly CumulativeThreadPoolEventCounterStream _cumulativeCounterStream;
+        private readonly RollingThreadPoolMaxConcurrencyStream _rollingThreadPoolMaxConcurrencyStream;
 
         private HystrixThreadPoolMetrics(IHystrixThreadPoolKey threadPoolKey, IHystrixTaskScheduler threadPool, IHystrixThreadPoolOptions properties)
             : base(null)
@@ -112,16 +102,16 @@ namespace Steeltoe.CircuitBreaker.Hystrix
             TaskScheduler = threadPool;
             Properties = properties;
 
-            rollingCounterStream = RollingThreadPoolEventCounterStream.GetInstance(threadPoolKey, properties);
-            cumulativeCounterStream = CumulativeThreadPoolEventCounterStream.GetInstance(threadPoolKey, properties);
-            rollingThreadPoolMaxConcurrencyStream = RollingThreadPoolMaxConcurrencyStream.GetInstance(threadPoolKey, properties);
+            _rollingCounterStream = RollingThreadPoolEventCounterStream.GetInstance(threadPoolKey, properties);
+            _cumulativeCounterStream = CumulativeThreadPoolEventCounterStream.GetInstance(threadPoolKey, properties);
+            _rollingThreadPoolMaxConcurrencyStream = RollingThreadPoolMaxConcurrencyStream.GetInstance(threadPoolKey, properties);
         }
 
         public static Func<int> GetCurrentConcurrencyThunk(IHystrixThreadPoolKey threadPoolKey)
         {
             return () =>
             {
-                return GetInstance(threadPoolKey).concurrentExecutionCount.Value;
+                return GetInstance(threadPoolKey)._concurrentExecutionCount.Value;
             };
         }
 
@@ -149,50 +139,50 @@ namespace Steeltoe.CircuitBreaker.Hystrix
 
         public void MarkThreadExecution()
         {
-            concurrentExecutionCount.IncrementAndGet();
+            _concurrentExecutionCount.IncrementAndGet();
         }
 
-        public long RollingCountThreadsExecuted => rollingCounterStream.GetLatestCount(ThreadPoolEventType.EXECUTED);
+        public long RollingCountThreadsExecuted => _rollingCounterStream.GetLatestCount(ThreadPoolEventType.EXECUTED);
 
-        public long CumulativeCountThreadsExecuted => cumulativeCounterStream.GetLatestCount(ThreadPoolEventType.EXECUTED);
+        public long CumulativeCountThreadsExecuted => _cumulativeCounterStream.GetLatestCount(ThreadPoolEventType.EXECUTED);
 
-        public long RollingCountThreadsRejected => rollingCounterStream.GetLatestCount(ThreadPoolEventType.REJECTED);
+        public long RollingCountThreadsRejected => _rollingCounterStream.GetLatestCount(ThreadPoolEventType.REJECTED);
 
-        public long CumulativeCountThreadsRejected => cumulativeCounterStream.GetLatestCount(ThreadPoolEventType.REJECTED);
+        public long CumulativeCountThreadsRejected => _cumulativeCounterStream.GetLatestCount(ThreadPoolEventType.REJECTED);
 
         public long GetRollingCount(ThreadPoolEventType @event)
         {
-            return rollingCounterStream.GetLatestCount(@event);
+            return _rollingCounterStream.GetLatestCount(@event);
         }
 
         public override long GetRollingCount(HystrixRollingNumberEvent @event)
         {
-            return rollingCounterStream.GetLatestCount(ThreadPoolEventTypeHelper.From(@event));
+            return _rollingCounterStream.GetLatestCount(ThreadPoolEventTypeHelper.From(@event));
         }
 
         public long GetCumulativeCount(ThreadPoolEventType @event)
         {
-            return cumulativeCounterStream.GetLatestCount(@event);
+            return _cumulativeCounterStream.GetLatestCount(@event);
         }
 
         public override long GetCumulativeCount(HystrixRollingNumberEvent @event)
         {
-            return cumulativeCounterStream.GetLatestCount(ThreadPoolEventTypeHelper.From(@event));
+            return _cumulativeCounterStream.GetLatestCount(ThreadPoolEventTypeHelper.From(@event));
         }
 
         public void MarkThreadCompletion()
         {
-            concurrentExecutionCount.DecrementAndGet();
+            _concurrentExecutionCount.DecrementAndGet();
         }
 
         public long RollingMaxActiveThreads
         {
-            get { return rollingThreadPoolMaxConcurrencyStream.LatestRollingMax; }
+            get { return _rollingThreadPoolMaxConcurrencyStream.LatestRollingMax; }
         }
 
         public void MarkThreadRejection()
         {
-            concurrentExecutionCount.DecrementAndGet();
+            _concurrentExecutionCount.DecrementAndGet();
         }
     }
 }

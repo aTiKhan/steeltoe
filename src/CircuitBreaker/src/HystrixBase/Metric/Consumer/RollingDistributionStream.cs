@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using HdrHistogram;
 using Steeltoe.Common.Util;
@@ -27,14 +17,14 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer
     public class RollingDistributionStream<Event> : RollingDistributionStreamBase
         where Event : IHystrixEvent
     {
-        private readonly BehaviorSubject<CachedValuesHistogram> rollingDistribution = new BehaviorSubject<CachedValuesHistogram>(CachedValuesHistogram.BackedBy(CachedValuesHistogram.GetNewHistogram()));
-        private readonly IObservable<CachedValuesHistogram> rollingDistributionStream;
-        private AtomicReference<IDisposable> rollingDistributionSubscription = new AtomicReference<IDisposable>(null);
+        private readonly BehaviorSubject<CachedValuesHistogram> _rollingDistribution = new BehaviorSubject<CachedValuesHistogram>(CachedValuesHistogram.BackedBy(CachedValuesHistogram.GetNewHistogram()));
+        private readonly IObservable<CachedValuesHistogram> _rollingDistributionStream;
+        private readonly AtomicReference<IDisposable> _rollingDistributionSubscription = new AtomicReference<IDisposable>(null);
 
         protected RollingDistributionStream(IHystrixEventStream<Event> stream, int numBuckets, int bucketSizeInMs, Func<LongHistogram, Event, LongHistogram> addValuesToBucket)
         {
-            List<LongHistogram> emptyDistributionsToStart = new List<LongHistogram>();
-            for (int i = 0; i < numBuckets; i++)
+            var emptyDistributionsToStart = new List<LongHistogram>();
+            for (var i = 0; i < numBuckets; i++)
             {
                 emptyDistributionsToStart.Add(CachedValuesHistogram.GetNewHistogram());
             }
@@ -45,7 +35,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer
                 return result;
             };
 
-            rollingDistributionStream = stream
+            _rollingDistributionStream = stream
                     .Observe()
                     .Window(TimeSpan.FromMilliseconds(bucketSizeInMs), NewThreadScheduler.Default) // stream of unaggregated buckets
                     .SelectMany((d) => reduceBucketToSingleDistribution(d)) // stream of aggregated Histograms
@@ -58,14 +48,14 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer
 
         public IObservable<CachedValuesHistogram> Observe()
         {
-            return rollingDistributionStream;
+            return _rollingDistributionStream;
         }
 
         public int LatestMean
         {
             get
             {
-                CachedValuesHistogram latest = Latest;
+                var latest = Latest;
                 if (latest != null)
                 {
                     return latest.GetMean();
@@ -79,7 +69,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer
 
         public int GetLatestPercentile(double percentile)
         {
-            CachedValuesHistogram latest = Latest;
+            var latest = Latest;
             if (latest != null)
             {
                 return latest.GetValueAtPercentile(percentile);
@@ -92,11 +82,11 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer
 
         public void StartCachingStreamValuesIfUnstarted()
         {
-            if (rollingDistributionSubscription.Value == null)
+            if (_rollingDistributionSubscription.Value == null)
             {
                 // the stream is not yet started
-                IDisposable candidateSubscription = Observe().Subscribe(rollingDistribution);
-                if (rollingDistributionSubscription.CompareAndSet(null, candidateSubscription))
+                var candidateSubscription = Observe().Subscribe(_rollingDistribution);
+                if (_rollingDistributionSubscription.CompareAndSet(null, candidateSubscription))
                 {
                     // won the race to set the subscription
                 }
@@ -112,18 +102,18 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Metric.Consumer
         {
             get
             {
-                rollingDistribution.TryGetValue(out CachedValuesHistogram value);
+                _rollingDistribution.TryGetValue(out var value);
                 return value;
             }
         }
 
         public void Unsubscribe()
         {
-            IDisposable s = rollingDistributionSubscription.Value;
+            var s = _rollingDistributionSubscription.Value;
             if (s != null)
             {
                 s.Dispose();
-                rollingDistributionSubscription.CompareAndSet(s, null);
+                _rollingDistributionSubscription.CompareAndSet(s, null);
             }
         }
     }

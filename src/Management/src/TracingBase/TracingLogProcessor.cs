@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using OpenTelemetry.Trace;
 using Steeltoe.Extensions.Logging;
@@ -21,13 +11,13 @@ namespace Steeltoe.Management.Tracing
 {
     public class TracingLogProcessor : IDynamicMessageProcessor
     {
-        private readonly ITracing tracing;
-        private readonly ITracingOptions options;
+        private readonly ITracing _tracing;
+        private readonly ITracingOptions _options;
 
         public TracingLogProcessor(ITracingOptions options, ITracing tracing)
         {
-            this.options = options;
-            this.tracing = tracing;
+            _options = options;
+            _tracing = tracing;
         }
 
         public string Process(string inputLogMessage)
@@ -38,11 +28,11 @@ namespace Steeltoe.Management.Tracing
                 var context = currentSpan.Context;
 
                 var sb = new StringBuilder(" [");
-                sb.Append(options.Name);
+                sb.Append(_options.Name);
                 sb.Append(",");
 
                 var traceId = context.TraceId.ToHexString();
-                if (traceId.Length > 16 && options.UseShortTraceIds)
+                if (traceId.Length > 16 && _options.UseShortTraceIds)
                 {
                     traceId = traceId.Substring(traceId.Length - 16, 16);
                 }
@@ -81,7 +71,7 @@ namespace Steeltoe.Management.Tracing
 
         protected internal TelemetrySpan GetCurrentSpan()
         {
-            var span = tracing.Tracer?.CurrentSpan;
+            var span = _tracing.Tracer?.CurrentSpan;
             if (span == null || !span.Context.IsValid)
             {
                 return null;

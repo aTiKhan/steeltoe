@@ -1,32 +1,22 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
 
-namespace Steeltoe.Messaging.Rabbit.Config
+namespace Steeltoe.Messaging.RabbitMQ.Config
 {
     public class ExchangeBuilder : AbstractBuilder
     {
         private string _name;
         private string _type;
         private bool _autoDelete;
-        private bool _durable;
+        private bool _durable = true;
         private bool _internal;
         private bool _delayed;
         private bool _ignoreDeclarationExceptions;
-        private bool _declare;
+        private bool _declare = true;
         private List<object> _declaringAdmins;
 
         public ExchangeBuilder(string name, string type)
@@ -37,22 +27,46 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
         public static ExchangeBuilder DirectExchange(string name)
         {
-            return new ExchangeBuilder(name, ExchangeTypes.DIRECT);
+            return new ExchangeBuilder(name, ExchangeType.DIRECT);
         }
 
         public static ExchangeBuilder TopicExchange(string name)
         {
-            return new ExchangeBuilder(name, ExchangeTypes.TOPIC);
+            return new ExchangeBuilder(name, ExchangeType.TOPIC);
         }
 
         public static ExchangeBuilder FanoutExchange(string name)
         {
-            return new ExchangeBuilder(name, ExchangeTypes.FANOUT);
+            return new ExchangeBuilder(name, ExchangeType.FANOUT);
         }
 
         public static ExchangeBuilder HeadersExchange(string name)
         {
-            return new ExchangeBuilder(name, ExchangeTypes.HEADERS);
+            return new ExchangeBuilder(name, ExchangeType.HEADERS);
+        }
+
+        public static IExchange Create(string exchangeName, string exchangeType)
+        {
+            if (ExchangeType.DIRECT.Equals(exchangeType, StringComparison.OrdinalIgnoreCase))
+            {
+                return new DirectExchange(exchangeName);
+            }
+            else if (ExchangeType.TOPIC.Equals(exchangeType, StringComparison.OrdinalIgnoreCase))
+            {
+                return new TopicExchange(exchangeName);
+            }
+            else if (ExchangeType.FANOUT.Equals(exchangeType, StringComparison.OrdinalIgnoreCase))
+            {
+                return new FanoutExchange(exchangeName);
+            }
+            else if (ExchangeType.HEADERS.Equals(exchangeType, StringComparison.OrdinalIgnoreCase))
+            {
+                return new HeadersExchange(exchangeName);
+            }
+            else
+            {
+                return new CustomExchange(exchangeName, exchangeType);
+            }
         }
 
         public ExchangeBuilder AutoDelete()
@@ -134,32 +148,14 @@ namespace Steeltoe.Messaging.Rabbit.Config
 
         public AbstractExchange Build()
         {
-            AbstractExchange exchange;
-            if (ExchangeTypes.DIRECT.Equals(_type))
-            {
-                exchange = new DirectExchange(_name, _durable, _autoDelete, Arguments);
-            }
-            else if (ExchangeTypes.TOPIC.Equals(_type))
-            {
-                exchange = new TopicExchange(_name, _durable, _autoDelete, Arguments);
-            }
-            else if (ExchangeTypes.FANOUT.Equals(_type))
-            {
-                exchange = new FanoutExchange(_name, _durable, _autoDelete, Arguments);
-            }
-            else if (ExchangeTypes.HEADERS.Equals(_type))
-            {
-                exchange = new HeadersExchange(_name, _durable, _autoDelete, Arguments);
-            }
-            else
-            {
-                exchange = new CustomExchange(_name, _type, _durable, _autoDelete, Arguments);
-            }
-
+            AbstractExchange exchange = Create(_name, _type) as AbstractExchange;
+            exchange.IsDurable = _durable;
+            exchange.IsAutoDelete = _autoDelete;
+            exchange.Arguments = Arguments;
             exchange.IsInternal = _internal;
             exchange.IsDelayed = _delayed;
             exchange.IgnoreDeclarationExceptions = _ignoreDeclarationExceptions;
-            exchange.Declare = _declare;
+            exchange.ShouldDeclare = _declare;
             if (_declaringAdmins != null && _declaringAdmins.Count > 0)
             {
                 exchange.SetAdminsThatShouldDeclare(_declaringAdmins.ToArray());

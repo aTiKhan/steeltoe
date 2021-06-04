@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
   <Import Project="..\..\..\..\versions.props" />
   
@@ -12,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Base\Steeltoe.Integration.Base.csproj" />
+    <ProjectReference Include="..\..\src\IntegrationBase\Steeltoe.Integration.IntegrationBase.csproj" />
   </ItemGroup>
 
 </Project>

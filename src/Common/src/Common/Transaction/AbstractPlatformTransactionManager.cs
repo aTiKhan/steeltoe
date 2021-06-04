@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
 using System;
@@ -18,7 +8,6 @@ using System.Collections.Generic;
 
 namespace Steeltoe.Common.Transaction
 {
-    // TODO: Move this to Common
     public abstract class AbstractPlatformTransactionManager : IPlatformTransactionManager
     {
         public const int SYNCHRONIZATION_ALWAYS = 0;
@@ -93,7 +82,7 @@ namespace Steeltoe.Common.Transaction
                     def.PropagationBehavior == AbstractTransactionDefinition.PROPAGATION_NESTED)
             {
                 var suspendedResources = Suspend(null);
-                _logger?.LogDebug("Creating new transaction with name [" + def.Name + "]: " + def);
+                _logger?.LogDebug("Creating new transaction with name [{name}] with {def}", def.Name, def);
                 try
                 {
                     var newSynchronization = TransactionSynchronization != SYNCHRONIZATION_NEVER;
@@ -391,18 +380,18 @@ namespace Steeltoe.Common.Transaction
             {
                 if (status.IsNewTransaction)
                 {
-                    _logger?.LogDebug("Initiating transaction rollback after commit exception", exception);
+                    _logger?.LogDebug(exception, "Initiating transaction rollback after commit exception");
                     DoRollback(status);
                 }
                 else if (status.HasTransaction && GlobalRollbackOnParticipationFailure)
                 {
-                    _logger?.LogDebug("Marking existing transaction as rollback-only after commit exception", exception);
+                    _logger?.LogDebug(exception, "Marking existing transaction as rollback-only after commit exception");
                     DoSetRollbackOnly(status);
                 }
             }
             catch (Exception ex)
             {
-                _logger?.LogError("Commit exception overridden by rollback exception", ex);
+                _logger?.LogError(ex, "Commit exception overridden by rollback exception");
                 TriggerAfterCompletion(status, AbstractTransactionSynchronization.STATUS_UNKNOWN);
                 throw;
             }
@@ -594,7 +583,7 @@ namespace Steeltoe.Common.Transaction
             catch (Exception)
             {
                 var exMessage = "Inner transaction begin exception overridden by outer transaction resume exception";
-                _logger?.LogError(exMessage, beginEx);
+                _logger?.LogError(beginEx, exMessage);
                 throw;
             }
         }
@@ -616,7 +605,7 @@ namespace Steeltoe.Common.Transaction
 
             if (definition.PropagationBehavior == AbstractTransactionDefinition.PROPAGATION_REQUIRES_NEW)
             {
-                _logger?.LogDebug("Suspending current transaction, creating new transaction with name [" + definition.Name + "]");
+                _logger?.LogDebug("Suspending current transaction, creating new transaction with name [{name}]", definition.Name);
                 var suspendedResources = Suspend(transaction);
                 try
                 {
@@ -641,7 +630,7 @@ namespace Steeltoe.Common.Transaction
                             "specify 'nestedTransactionAllowed' property with value 'true'");
                 }
 
-                _logger?.LogDebug("Creating nested transaction with name [" + definition.Name + "]");
+                _logger?.LogDebug("Creating nested transaction with name [{name}]", definition.Name);
                 if (UseSavepointForNestedTransaction)
                 {
                     // Create savepoint within existing Spring-managed transaction,

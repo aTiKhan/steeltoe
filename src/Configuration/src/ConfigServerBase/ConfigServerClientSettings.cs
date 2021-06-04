@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Security.Cryptography.X509Certificates;
@@ -131,8 +121,8 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         private static readonly char[] COLON_DELIMIT = new char[] { ':' };
         private static readonly char[] COMMA_DELIMIT = new char[] { ',' };
 
-        private string username;
-        private string password;
+        private string _username;
+        private string _password;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigServerClientSettings"/> class.
@@ -189,7 +179,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         public virtual string Username
         {
             get { return GetUserName(); }
-            set { this.username = value; }
+            set { _username = value; }
         }
 
         /// <summary>
@@ -198,7 +188,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         public virtual string Password
         {
             get { return GetPassword(); }
-            set { this.password = value; }
+            set { _password = value; }
         }
 #pragma warning restore S4275 // Getters and setters should access the expected fields
 
@@ -325,7 +315,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
             {
                 if (!string.IsNullOrEmpty(Uri))
                 {
-                    System.Uri uri = new System.Uri(Uri);
+                    var uri = new System.Uri(Uri);
                     return uri.GetComponents(UriComponents.HttpRequestUrl, UriFormat.Unescaped);
                 }
             }
@@ -340,7 +330,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         {
             try
             {
-                System.Uri ri = new System.Uri(uri);
+                var ri = new System.Uri(uri);
                 return ri.GetComponents(UriComponents.HttpRequestUrl, UriFormat.Unescaped);
             }
             catch (UriFormatException)
@@ -354,10 +344,10 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
         {
             if (!string.IsNullOrEmpty(Uri))
             {
-                string[] uris = Uri.Split(COMMA_DELIMIT, StringSplitOptions.RemoveEmptyEntries);
-                for (int i = 0; i < uris.Length; i++)
+                var uris = Uri.Split(COMMA_DELIMIT, StringSplitOptions.RemoveEmptyEntries);
+                for (var i = 0; i < uris.Length; i++)
                 {
-                    string uri = GetRawUri(uris[i]);
+                    var uri = GetRawUri(uris[i]);
                     if (string.IsNullOrEmpty(uri))
                     {
                         return Array.Empty<string>();
@@ -389,9 +379,9 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
 
         internal string GetPassword(string uri)
         {
-            if (!string.IsNullOrEmpty(password))
+            if (!string.IsNullOrEmpty(_password))
             {
-                return password;
+                return _password;
             }
 
             return GetUserPassElement(uri, 1);
@@ -404,9 +394,9 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
 
         internal string GetUserName(string uri)
         {
-            if (!string.IsNullOrEmpty(username))
+            if (!string.IsNullOrEmpty(_username))
             {
-                return username;
+                return _username;
             }
 
             return GetUserPassElement(uri, 0);
@@ -418,7 +408,7 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
             {
                 if (!string.IsNullOrEmpty(uri))
                 {
-                    System.Uri u = new System.Uri(uri);
+                    var u = new System.Uri(uri);
                     return u.UserInfo;
                 }
             }
@@ -439,10 +429,10 @@ namespace Steeltoe.Extensions.Configuration.ConfigServer
             }
 
             string result = null;
-            string userInfo = GetUserInfo(uri);
+            var userInfo = GetUserInfo(uri);
             if (!string.IsNullOrEmpty(userInfo))
             {
-                string[] info = userInfo.Split(COLON_DELIMIT);
+                var info = userInfo.Split(COLON_DELIMIT);
                 if (info.Length > index)
                 {
                     result = info[index];

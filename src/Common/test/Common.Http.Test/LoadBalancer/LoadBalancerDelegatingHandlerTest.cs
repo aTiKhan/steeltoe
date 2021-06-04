@@ -1,23 +1,13 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Steeltoe.Common.Http.Test;
 using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Steeltoe.Common.Http.LoadBalancer.Test
@@ -32,7 +22,7 @@ namespace Steeltoe.Common.Http.LoadBalancer.Test
         }
 
         [Fact]
-        public async void ResolvesUri_TracksStats_WithProvidedLoadBalancer()
+        public async Task ResolvesUri_TracksStats_WithProvidedLoadBalancer()
         {
             // arrange
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://replaceme/api");
@@ -41,7 +31,7 @@ namespace Steeltoe.Common.Http.LoadBalancer.Test
             var invoker = new HttpMessageInvoker(handler);
 
             // act
-            var result = await invoker.SendAsync(httpRequestMessage, default(CancellationToken));
+            var result = await invoker.SendAsync(httpRequestMessage, default);
 
             // assert
             Assert.Equal("https://someresolvedhost/api", result.Headers.GetValues("requestUri").First());
@@ -49,7 +39,7 @@ namespace Steeltoe.Common.Http.LoadBalancer.Test
         }
 
         [Fact]
-        public async void DoesntTrackStats_WhenResolutionFails_WithProvidedLoadBalancer()
+        public async Task DoesntTrackStats_WhenResolutionFails_WithProvidedLoadBalancer()
         {
             // arrange
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://replaceme/api");
@@ -58,14 +48,14 @@ namespace Steeltoe.Common.Http.LoadBalancer.Test
             var invoker = new HttpMessageInvoker(handler);
 
             // act
-            var result = await Assert.ThrowsAsync<Exception>(async () => await invoker.SendAsync(httpRequestMessage, default(CancellationToken)));
+            var result = await Assert.ThrowsAsync<Exception>(async () => await invoker.SendAsync(httpRequestMessage, default));
 
             // assert
             Assert.Empty(loadBalancer.Stats);
         }
 
         [Fact]
-        public async void TracksStats_WhenRequestsGoWrong_WithProvidedLoadBalancer()
+        public async Task TracksStats_WhenRequestsGoWrong_WithProvidedLoadBalancer()
         {
             // arrange
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://replaceme/api");
@@ -74,7 +64,7 @@ namespace Steeltoe.Common.Http.LoadBalancer.Test
             var invoker = new HttpMessageInvoker(handler);
 
             // act
-            var result = await invoker.SendAsync(httpRequestMessage, default(CancellationToken));
+            var result = await invoker.SendAsync(httpRequestMessage, default);
 
             // assert
             Assert.Single(loadBalancer.Stats);

@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Newtonsoft.Json;
 using Steeltoe.CircuitBreaker.Hystrix.CircuitBreaker;
@@ -26,68 +16,54 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Serial
     {
         public static string ToJsonString(HystrixDashboardStream.DashboardData data)
         {
-            using (StringWriter sw = new StringWriter())
+            using var sw = new StringWriter();
+            using (var writer = new JsonTextWriter(sw))
             {
-                using (JsonTextWriter writer = new JsonTextWriter(sw))
-                {
-                    WriteDashboardData(writer, data);
-                }
-
-                return sw.ToString();
+                WriteDashboardData(writer, data);
             }
+
+            return sw.ToString();
         }
 
         public static string ToJsonString(HystrixCommandMetrics commandMetrics)
         {
-            using (StringWriter sw = new StringWriter())
-            {
-                using (JsonTextWriter writer = new JsonTextWriter(sw))
-                {
-                    WriteCommandMetrics(writer, commandMetrics);
-                    return sw.ToString();
-                }
-            }
+            using var sw = new StringWriter();
+            using var writer = new JsonTextWriter(sw);
+            WriteCommandMetrics(writer, commandMetrics);
+            return sw.ToString();
         }
 
         public static string ToJsonString(HystrixThreadPoolMetrics threadPoolMetrics)
         {
-            using (StringWriter sw = new StringWriter())
-            {
-                using (JsonTextWriter writer = new JsonTextWriter(sw))
-                {
-                    WriteThreadPoolMetrics(writer, threadPoolMetrics);
-                    return sw.ToString();
-                }
-            }
+            using var sw = new StringWriter();
+            using var writer = new JsonTextWriter(sw);
+            WriteThreadPoolMetrics(writer, threadPoolMetrics);
+            return sw.ToString();
         }
 
         public static string ToJsonString(HystrixCollapserMetrics collapserMetrics)
         {
-            using (StringWriter sw = new StringWriter())
-            {
-                using (JsonTextWriter writer = new JsonTextWriter(sw))
-                {
-                    WriteCollapserMetrics(writer, collapserMetrics);
-                    return sw.ToString();
-                }
-            }
+            using var sw = new StringWriter();
+            using var writer = new JsonTextWriter(sw);
+            WriteCollapserMetrics(writer, collapserMetrics);
+            return sw.ToString();
         }
 
         public static List<string> ToMultipleJsonStrings(HystrixDashboardStream.DashboardData dashboardData)
         {
-            List<string> jsonStrings = new List<string>();
+            var jsonStrings = new List<string>();
 
-            foreach (HystrixCommandMetrics commandMetrics in dashboardData.CommandMetrics)
+            foreach (var commandMetrics in dashboardData.CommandMetrics)
             {
                 jsonStrings.Add(ToJsonString(commandMetrics));
             }
 
-            foreach (HystrixThreadPoolMetrics threadPoolMetrics in dashboardData.ThreadPoolMetrics)
+            foreach (var threadPoolMetrics in dashboardData.ThreadPoolMetrics)
             {
                 jsonStrings.Add(ToJsonString(threadPoolMetrics));
             }
 
-            foreach (HystrixCollapserMetrics collapserMetrics in dashboardData.CollapserMetrics)
+            foreach (var collapserMetrics in dashboardData.CollapserMetrics)
             {
                 jsonStrings.Add(ToJsonString(collapserMetrics));
             }
@@ -100,17 +76,17 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Serial
             try
             {
                 writer.WriteStartArray();
-                foreach (HystrixCommandMetrics commandMetrics in data.CommandMetrics)
+                foreach (var commandMetrics in data.CommandMetrics)
                 {
                     WriteCommandMetrics(writer, commandMetrics);
                 }
 
-                foreach (HystrixThreadPoolMetrics threadPoolMetrics in data.ThreadPoolMetrics)
+                foreach (var threadPoolMetrics in data.ThreadPoolMetrics)
                 {
                     WriteThreadPoolMetrics(writer, threadPoolMetrics);
                 }
 
-                foreach (HystrixCollapserMetrics collapserMetrics in data.CollapserMetrics)
+                foreach (var collapserMetrics in data.CollapserMetrics)
                 {
                     WriteCollapserMetrics(writer, collapserMetrics);
                 }
@@ -125,7 +101,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Serial
 
         private static void WriteThreadPoolMetrics(JsonTextWriter writer, HystrixThreadPoolMetrics threadPoolMetrics)
         {
-            IHystrixThreadPoolKey key = threadPoolMetrics.ThreadPoolKey;
+            var key = threadPoolMetrics.ThreadPoolKey;
 
             writer.WriteStartObject();
 
@@ -156,7 +132,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Serial
 
         private static void WriteCollapserMetrics(JsonTextWriter writer, HystrixCollapserMetrics collapserMetrics)
         {
-            IHystrixCollapserKey key = collapserMetrics.CollapserKey;
+            var key = collapserMetrics.CollapserKey;
 
             writer.WriteStartObject();
 
@@ -194,8 +170,8 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Serial
 
         private static void WriteCommandMetrics(JsonTextWriter writer, HystrixCommandMetrics commandMetrics)
         {
-            IHystrixCommandKey key = commandMetrics.CommandKey;
-            ICircuitBreaker circuitBreaker = HystrixCircuitBreakerFactory.GetInstance(key);
+            var key = commandMetrics.CommandKey;
+            var circuitBreaker = HystrixCircuitBreakerFactory.GetInstance(key);
 
             writer.WriteStartObject();
             writer.WriteStringField("type", "HystrixCommand");
@@ -214,7 +190,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Serial
                 writer.WriteBooleanField("isCircuitBreakerOpen", circuitBreaker.IsOpen);
             }
 
-            HealthCounts healthCounts = commandMetrics.Healthcounts;
+            var healthCounts = commandMetrics.Healthcounts;
             writer.WriteIntegerField("errorPercentage", healthCounts.ErrorPercentage);
             writer.WriteLongField("errorCount", healthCounts.ErrorCount);
             writer.WriteLongField("requestCount", healthCounts.TotalRequests);
@@ -226,15 +202,15 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Serial
             writer.WriteLongField("rollingCountExceptionsThrown", commandMetrics.GetRollingCount(HystrixEventType.EXCEPTION_THROWN));
             writer.WriteLongField("rollingCountFailure", commandMetrics.GetRollingCount(HystrixEventType.FAILURE));
             writer.WriteLongField("rollingCountFallbackEmit", commandMetrics.GetRollingCount(HystrixEventType.FALLBACK_EMIT));
-            writer.WriteLongField("rollingCountFallbackFailure",  commandMetrics.GetRollingCount(HystrixEventType.FALLBACK_FAILURE));
-            writer.WriteLongField("rollingCountFallbackMissing",  commandMetrics.GetRollingCount(HystrixEventType.FALLBACK_MISSING));
+            writer.WriteLongField("rollingCountFallbackFailure", commandMetrics.GetRollingCount(HystrixEventType.FALLBACK_FAILURE));
+            writer.WriteLongField("rollingCountFallbackMissing", commandMetrics.GetRollingCount(HystrixEventType.FALLBACK_MISSING));
             writer.WriteLongField("rollingCountFallbackRejection", commandMetrics.GetRollingCount(HystrixEventType.FALLBACK_REJECTION));
-            writer.WriteLongField("rollingCountFallbackSuccess",  commandMetrics.GetRollingCount(HystrixEventType.FALLBACK_SUCCESS));
+            writer.WriteLongField("rollingCountFallbackSuccess", commandMetrics.GetRollingCount(HystrixEventType.FALLBACK_SUCCESS));
             writer.WriteLongField("rollingCountResponsesFromCache", commandMetrics.GetRollingCount(HystrixEventType.RESPONSE_FROM_CACHE));
-            writer.WriteLongField("rollingCountSemaphoreRejected",  commandMetrics.GetRollingCount(HystrixEventType.SEMAPHORE_REJECTED));
-            writer.WriteLongField("rollingCountShortCircuited",  commandMetrics.GetRollingCount(HystrixEventType.SHORT_CIRCUITED));
-            writer.WriteLongField("rollingCountSuccess",  commandMetrics.GetRollingCount(HystrixEventType.SUCCESS));
-            writer.WriteLongField("rollingCountThreadPoolRejected",  commandMetrics.GetRollingCount(HystrixEventType.THREAD_POOL_REJECTED));
+            writer.WriteLongField("rollingCountSemaphoreRejected", commandMetrics.GetRollingCount(HystrixEventType.SEMAPHORE_REJECTED));
+            writer.WriteLongField("rollingCountShortCircuited", commandMetrics.GetRollingCount(HystrixEventType.SHORT_CIRCUITED));
+            writer.WriteLongField("rollingCountSuccess", commandMetrics.GetRollingCount(HystrixEventType.SUCCESS));
+            writer.WriteLongField("rollingCountThreadPoolRejected", commandMetrics.GetRollingCount(HystrixEventType.THREAD_POOL_REJECTED));
             writer.WriteLongField("rollingCountTimeout", commandMetrics.GetRollingCount(HystrixEventType.TIMEOUT));
 
             writer.WriteIntegerField("currentConcurrentExecutionCount", commandMetrics.CurrentConcurrentExecutionCount);
@@ -267,7 +243,7 @@ namespace Steeltoe.CircuitBreaker.Hystrix.Serial
             writer.WriteEndObject();
 
             // property values for reporting what is actually seen by the command rather than what was set somewhere
-            IHystrixCommandOptions commandProperties = commandMetrics.Properties;
+            var commandProperties = commandMetrics.Properties;
 
             writer.WriteIntegerField("propertyValue_circuitBreakerRequestVolumeThreshold", commandProperties.CircuitBreakerRequestVolumeThreshold);
             writer.WriteIntegerField("propertyValue_circuitBreakerSleepWindowInMilliseconds", commandProperties.CircuitBreakerSleepWindowInMilliseconds);

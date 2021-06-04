@@ -1,16 +1,6 @@
-﻿// Copyright 2017 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -68,6 +58,45 @@ namespace Steeltoe.Common.Hosting.Test
             // Assert
             var addresses = server.ServerFeatures.Get<IServerAddressesFeature>();
             Assert.Contains("http://*:42", addresses.Addresses);
+        }
+
+        [Fact]
+        public void UseCloudHosting_ReadsTyePorts()
+        {
+            // Arrange
+            Environment.SetEnvironmentVariable("PORT", "80;443");
+            var hostBuilder = new WebHostBuilder()
+                                .UseStartup<TestServerStartup>()
+                                .UseKestrel();
+
+            // Act
+            hostBuilder.UseCloudHosting();
+            var server = hostBuilder.Build();
+
+            // Assert
+            var addresses = server.ServerFeatures.Get<IServerAddressesFeature>();
+            Assert.Contains("http://*:80", addresses.Addresses);
+            Assert.Contains("https://*:443", addresses.Addresses);
+        }
+
+        [Fact]
+        public void UseCloudHosting_SeesTyePortsAndUsesAspNetCoreURL()
+        {
+            // Arrange
+            Environment.SetEnvironmentVariable("ASPNETCORE_URLS", "http://*:80;https://*:443");
+            Environment.SetEnvironmentVariable("PORT", "88;4443");
+            var hostBuilder = new WebHostBuilder()
+                                .UseStartup<TestServerStartup>()
+                                .UseKestrel();
+
+            // Act
+            hostBuilder.UseCloudHosting();
+            var server = hostBuilder.Build();
+
+            // Assert
+            var addresses = server.ServerFeatures.Get<IServerAddressesFeature>();
+            Assert.Contains("http://*:80", addresses.Addresses);
+            Assert.Contains("https://*:443", addresses.Addresses);
         }
 
         [Fact]
@@ -148,6 +177,9 @@ namespace Steeltoe.Common.Hosting.Test
         }
 
         [Fact]
+#if NET5_0
+        [Trait("Category", "SkipOnMacOS")] // for .NET 5, this test produces an admin prompt on OSX
+#endif
         public void UseCloudHosting_GenericHost_UsesLocalPortSettings()
         {
             // Arrange
